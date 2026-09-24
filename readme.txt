@@ -1,13 +1,14 @@
 === Taxonomy Tidy ===
+Contributors: shahidirfan100
 Tags: taxonomy, categories, tags, terms, cleanup
 Requires at least: 6.4
-Tested up to: 7.1
+Tested up to: 7.1.2
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Review duplicate and unused terms before cleanup. Preview impact, log each change, and safely restore merges, renames, or removals.
+Review duplicate and empty terms, preview bulk changes, and restore batches. Optionally redirect merged archives or return 410 for removed terms.
 
 == Description ==
 
@@ -19,17 +20,18 @@ The scan is read-only. It reports:
 * Labels that differ only by case, spacing, punctuation, or accents.
 * Terms with no assigned objects.
 
-Before a change, review the affected objects, parent and child terms, term archive URLs, and the canonical term to keep. Each change is written to a site-local audit log before WordPress updates term assignments. Rollback preserves the original term and taxonomy IDs, saved term metadata, relationships, and hierarchy. It checks for conflicting later changes and stops rather than overwriting them. Activity also lets you resume recovery after an interrupted request; review any reported conflict before retrying.
+Select several duplicate groups, choose one canonical term for each group, and review all affected assignments, hierarchy changes, and archive URLs together before applying one batch. You can also select multiple empty terms for one reviewed removal batch. Each operation is written to a site-local audit log before WordPress updates term assignments. Activity can roll back the complete batch and restore the original term and taxonomy IDs, saved term metadata, relationships, and hierarchy. Rollback checks for conflicting later changes and stops rather than overwriting them. Activity also lets you resume recovery after an interrupted request; review any reported conflict before retrying.
 
-The plugin works only with taxonomies available to the current user on the current site. It does not send term data to a remote service, add front-end code, or create redirects. The archive URL impact is recorded in the audit report for review.
+The plugin works only with taxonomies available to the current user on the current site. It does not send term data to a remote service or add front-end assets. Merges can optionally create a permanent same-site redirect from each removed term archive to its canonical archive. Removing an empty term records an HTTP 410 Gone response for its former public archive. Both behaviors are saved with the audit operation and are removed when that operation is rolled back.
 
 == Installation ==
 
 1. Upload the `taxonomy-tidy` folder to `/wp-content/plugins/` or install the ZIP from the Plugins screen.
 2. Activate Taxonomy Tidy.
 3. Open Taxonomy Tidy in the dashboard and select a taxonomy to scan.
-4. Review a finding, inspect its impact, and confirm the change only when the preview is correct.
-5. Use Activity to export the audit report or roll back an applied batch.
+4. Select duplicate groups, choose the canonical term to keep in each group, and review the complete batch.
+5. Select empty terms and review the removal batch before applying it.
+6. Use Activity to export the audit report or roll back an applied batch.
 
 == Frequently Asked Questions ==
 
@@ -49,9 +51,13 @@ You choose the term to keep. Taxonomy Tidy first adds that term to each affected
 
 Yes. Activity offers a rollback action for an applied batch. It restores the source term with its original IDs, metadata, object assignments, and hierarchy. If those IDs or terms have since been reused, rollback stops and reports the conflict.
 
-= Does the plugin create redirects? =
+= Can I redirect a merged term archive? =
 
-No. The preview and export show the old and new archive URLs when they differ so you can plan redirects with your site's existing redirect tool.
+Yes. Turn on the 301 redirect option in the batch review or make it the default in Settings. Each redirect stays on the current site, follows later term merges, and is removed when its audit operation is rolled back.
+
+= What happens to an empty term's archive when I remove it? =
+
+Taxonomy Tidy records a 410 Gone response for its former public archive URL. The site's normal not-found template still renders. Rolling back the removal removes the 410 rule and restores the term.
 
 = Does this work with WooCommerce and custom taxonomies? =
 
@@ -66,9 +72,21 @@ It is stored in local database tables for the current site. It remains available
 1. A live scan of registered taxonomies with duplicate groups and empty terms.
 2. An impact review showing affected objects, hierarchy, and term archive URLs.
 3. The local activity log with batch status and rollback controls.
-4. Settings for private taxonomy visibility and uninstall data handling.
+4. Settings for taxonomy visibility, merge redirects, and uninstall data handling.
 
 == Changelog ==
 
+= 1.1.0 =
+* Select and review multiple duplicate groups in one preview; merge all non-canonical terms into the selected canonical term.
+* Remove multiple empty terms in one reviewed, reversible batch.
+* Add batch-level rollback, per-operation audit snapshots, and recovery for partially applied batches.
+* Add optional same-site 301 redirects for merged archives and 410 Gone responses for removed empty-term archives.
+* Add a Settings preference for the default merge redirect choice.
+
 = 1.0.0 =
 * Initial release with read-only scans, impact previews, merge, rename, empty-term removal, audit exports, and guarded rollback.
+
+== Upgrade Notice ==
+
+= 1.1.0 =
+Bulk changes now use one reviewed, confirmed, and reversible batch. Merge redirects and removed-term 410 responses are recorded with the batch.

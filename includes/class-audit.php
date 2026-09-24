@@ -14,7 +14,7 @@ class Audit {
 	}
 
 	/** @return array|\WP_Error */
-	public static function preview( $action, $taxonomy_name, $source_id, $target_id = 0, $new_name = '', $new_slug = '' ) {
+	public static function preview( $action, $taxonomy_name, $source_id, $target_id = 0, $new_name = '', $new_slug = '', $options = array() ) {
 		if ( ! in_array( $action, array( 'merge', 'rename', 'delete' ), true ) ) {
 			return new \WP_Error( 'taxonomy_tidy_invalid_action', __( 'Choose a supported taxonomy change.', 'taxonomy-tidy' ) );
 		}
@@ -91,6 +91,7 @@ class Audit {
 			'new_url'           => $new_url,
 			'new_name'          => $new_name,
 			'new_slug'          => $new_slug,
+			'create_redirects'  => 'merge' === $action && ! empty( $options['create_redirects'] ),
 		);
 	}
 
@@ -105,6 +106,7 @@ class Audit {
 			'children' => array(),
 			'new_name' => isset( $preview['new_name'] ) ? $preview['new_name'] : '',
 			'new_slug' => isset( $preview['new_slug'] ) ? $preview['new_slug'] : '',
+			'redirect' => ! empty( $preview['create_redirects'] ),
 		);
 		foreach ( $preview['children'] as $child ) {
 			$context['children'][] = array( (int) $child->term_id, (int) $child->parent );
@@ -133,8 +135,8 @@ class Audit {
 	}
 
 	/** Merge one term into a chosen canonical term, with an exact-ID rollback record. */
-	public static function merge( $taxonomy_name, $source_id, $target_id ) {
-		$preview = self::preview( 'merge', $taxonomy_name, $source_id, $target_id );
+	public static function merge( $taxonomy_name, $source_id, $target_id, $options = array() ) {
+		$preview = self::preview( 'merge', $taxonomy_name, $source_id, $target_id, '', '', $options );
 		if ( is_wp_error( $preview ) ) {
 			return $preview;
 		}
@@ -159,8 +161,140 @@ class Audit {
 		return self::apply_saved_operation( $preview );
 	}
 
+	/** Apply a reviewed set of same-taxonomy operations under one reversible batch. */
+	public static function apply_batch( $previews ) {
+		global $wpdb;
+		if ( ! is_array( $previews ) || empty( $previews ) || count( $previews ) > 100 ) {
+			return new \WP_Error( 'taxonomy_tidy_batch_size_invalid', __( 'Choose between 1 and 100 operations for one reviewed batch.', 'taxonomy-tidy' ) );
+		}
+		$taxonomy_name = $previews[0]['taxonomy']->name;
+		$action        = $previews[0]['action'];
+		$source_ids    = array();
+		$target_ids    = array();
+		$affected      = 0;
+		$redirects     = 0;
+		foreach ( $previews as $preview ) {
+			if ( ! isset( $preview['taxonomy']->name ) || $taxonomy_name !== $preview['taxonomy']->name || $action !== $preview['action'] || ! in_array( $action, array( 'merge', 'delete' ), true ) ) {
+				return new \WP_Error( 'taxonomy_tidy_batch_mixed', __( 'A batch must contain one action for one taxonomy.', 'taxonomy-tidy' ) );
+			}
+			$source_id = (int) $preview['source']->term_id;
+			$target_id = $preview['target'] ? (int) $preview['target']->term_id : 0;
+			if ( isset( $source_ids[ $source_id ] ) || ( $target_id && isset( $source_ids[ $target_id ] ) ) ) {
+				return new \WP_Error( 'taxonomy_tidy_batch_overlap', __( 'A term cannot be changed and kept in the same batch. Choose separate groups and review them again.', 'taxonomy-tidy' ) );
+			}
+			$source_ids[ $source_id ] = true;
+			if ( $target_id ) {
+				$target_ids[ $target_id ] = true;
+			}
+			$affected  += (int) $preview['object_count'];
+			$redirects += ! empty( $preview['create_redirects'] ) ? 1 : 0;
+		}
+		foreach ( $target_ids as $target_id => $unused ) {
+			if ( isset( $source_ids[ $target_id ] ) ) {
+				return new \WP_Error( 'taxonomy_tidy_batch_overlap', __( 'A canonical term cannot also be merged or removed in the same batch. Choose separate groups and review them again.', 'taxonomy-tidy' ) );
+			}
+		}
+
+		$uuid          = wp_generate_uuid4();
+		$batch_table   = self::table( 'batches' );
+		$preview_count = count( $previews );
+		/* translators: %s: number of source terms in this batch. */
+		$term_summary = sprintf( _n( '%s term', '%s terms', $preview_count, 'taxonomy-tidy' ), number_format_i18n( $preview_count ) );
+		$summary      = wp_json_encode(
+			array(
+				'action'         => 'merge' === $action ? 'bulk_merge' : 'bulk_delete',
+				'taxonomy'       => $taxonomy_name,
+				'source_name'    => $term_summary,
+				'target_name'    => '',
+				'affected_count' => $affected,
+				'redirect_count' => $redirects,
+			)
+		);
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This local row is the parent restore point for all operations in the reviewed batch.
+		if ( false === $wpdb->insert(
+			$batch_table,
+			array(
+				'batch_uuid'   => $uuid,
+				'user_id'      => get_current_user_id(),
+				'status'       => 'pending',
+				'action_count' => count( $previews ),
+				'summary'      => $summary,
+				'created_at'   => current_time( 'mysql', true ),
+			),
+			array( '%s', '%d', '%s', '%d', '%s', '%s' )
+		) ) {
+			return new \WP_Error( 'taxonomy_tidy_audit_failed', __( 'The batch audit record could not be created, so no terms were changed.', 'taxonomy-tidy' ) );
+		}
+		$batch_id = (int) $wpdb->insert_id;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Mark the parent restore point before the first mutation begins.
+		if ( 1 !== $wpdb->update(
+			$batch_table,
+			array( 'status' => 'applying' ),
+			array(
+				'id'     => $batch_id,
+				'status' => 'pending',
+			),
+			array( '%s' ),
+			array( '%d', '%s' )
+		) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Remove the empty parent row because no operation was started.
+			$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+			return new \WP_Error( 'taxonomy_tidy_apply_start_failed', __( 'The batch could not be marked ready. No taxonomy change was attempted; review Activity before retrying.', 'taxonomy-tidy' ) );
+		}
+
+		$applied = 0;
+		foreach ( $previews as $index => $preview ) {
+			$result = self::apply_saved_operation(
+				$preview,
+				array(
+					'batch_id'    => $batch_id,
+					'batch_uuid'  => $uuid,
+					'sequence_no' => $index + 1,
+				)
+			);
+			if ( is_wp_error( $result ) ) {
+				$status = 'taxonomy_tidy_apply_and_restore_failed' === $result->get_error_code() ? 'rollback_failed' : ( $applied ? 'apply_failed' : 'failed' );
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Preserve partial-apply recovery state after the operation reports a failure.
+				$wpdb->update(
+					$batch_table,
+					array(
+						'status'       => $status,
+						'completed_at' => current_time( 'mysql', true ),
+					),
+					array( 'id' => $batch_id ),
+					array( '%s', '%s' ),
+					array( '%d' )
+				);
+				$message = $result->get_error_message();
+				if ( $applied || 'rollback_failed' === $status ) {
+					/* translators: 1: original operation error, 2: audit batch UUID. */
+					$message = sprintf( __( '%1$s Earlier changes are saved in batch %2$s. Open Activity to roll back or recover the whole batch.', 'taxonomy-tidy' ), $message, $uuid );
+				}
+				return new \WP_Error( $result->get_error_code(), $message );
+			}
+			++$applied;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Complete the shared audit batch after all operations have been saved.
+		$wpdb->update(
+			$batch_table,
+			array(
+				'status'       => 'applied',
+				'completed_at' => current_time( 'mysql', true ),
+			),
+			array( 'id' => $batch_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+		return array(
+			'batch_id'   => $batch_id,
+			'batch_uuid' => $uuid,
+			'action'     => 'bulk',
+		);
+	}
+
 	/** Build the durable pre-change snapshot, apply the operation, and compensate on failure. */
-	private static function apply_saved_operation( $preview ) {
+	private static function apply_saved_operation( $preview, $batch_context = null ) {
 		global $wpdb;
 		$source        = $preview['source'];
 		$taxonomy      = $preview['taxonomy'];
@@ -188,21 +322,21 @@ class Audit {
 			);
 		}
 		$snapshot = array(
-			'term_row'      => $source_row,
-			'taxonomy_row'  => $tt_row,
-			'term_meta'     => $meta_rows,
-			'children'      => array(),
-			'before'        => array(
+			'term_row'         => $source_row,
+			'taxonomy_row'     => $tt_row,
+			'term_meta'        => $meta_rows,
+			'children'         => array(),
+			'before'           => array(
 				'name'        => $source->name,
 				'slug'        => $source->slug,
 				'description' => $source->description,
 				'parent'      => (int) $source->parent,
 			),
-			'requested'     => array(
+			'requested'        => array(
 				'name' => $preview['new_name'],
 				'slug' => $preview['new_slug'],
 			),
-			'target_before' => $preview['target'] ? array(
+			'target_before'    => $preview['target'] ? array(
 				'id'          => (int) $preview['target']->term_id,
 				'name'        => $preview['target']->name,
 				'slug'        => $preview['target']->slug,
@@ -210,9 +344,10 @@ class Audit {
 				'parent'      => (int) $preview['target']->parent,
 				'tt_id'       => (int) $preview['target']->term_taxonomy_id,
 			) : array(),
-			'after'         => array(),
-			'old_url'       => $preview['old_url'],
-			'new_url'       => $preview['new_url'],
+			'after'            => array(),
+			'old_url'          => $preview['old_url'],
+			'new_url'          => $preview['new_url'],
+			'create_redirects' => ! empty( $preview['create_redirects'] ),
 		);
 		foreach ( $preview['children'] as $child ) {
 			$after_parent = (int) $child->parent;
@@ -229,33 +364,38 @@ class Audit {
 			);
 		}
 
-		$uuid               = wp_generate_uuid4();
-		$now                = current_time( 'mysql', true );
+		$owns_batch         = ! is_array( $batch_context );
+		$uuid               = $owns_batch ? wp_generate_uuid4() : $batch_context['batch_uuid'];
 		$batch_table        = self::table( 'batches' );
 		$operation_table    = self::table( 'operations' );
 		$relationship_table = self::table( 'relationships' );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
-		$inserted = $wpdb->insert(
-			$batch_table,
-			array(
-				'batch_uuid'   => $uuid,
-				'user_id'      => get_current_user_id(),
-				'status'       => 'pending',
-				'action_count' => 1,
-				'created_at'   => $now,
-			),
-			array( '%s', '%d', '%s', '%d', '%s' )
-		);
-		if ( false === $inserted ) {
-			return new \WP_Error( 'taxonomy_tidy_audit_failed', __( 'The audit record could not be created, so no change was made.', 'taxonomy-tidy' ) );
+		if ( $owns_batch ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
+			$inserted = $wpdb->insert(
+				$batch_table,
+				array(
+					'batch_uuid'   => $uuid,
+					'user_id'      => get_current_user_id(),
+					'status'       => 'pending',
+					'action_count' => 1,
+					'created_at'   => current_time( 'mysql', true ),
+				),
+				array( '%s', '%d', '%s', '%d', '%s' )
+			);
+			if ( false === $inserted ) {
+				return new \WP_Error( 'taxonomy_tidy_audit_failed', __( 'The audit record could not be created, so no change was made.', 'taxonomy-tidy' ) );
+			}
+			$batch_id = (int) $wpdb->insert_id;
+		} else {
+			$batch_id = (int) $batch_context['batch_id'];
 		}
-		$batch_id = (int) $wpdb->insert_id;
+		$sequence_no = $owns_batch ? 1 : (int) $batch_context['sequence_no'];
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
 		$inserted = $wpdb->insert(
 			$operation_table,
 			array(
 				'batch_id'       => $batch_id,
-				'sequence_no'    => 1,
+				'sequence_no'    => $sequence_no,
 				'action'         => $preview['action'],
 				'taxonomy'       => $taxonomy_name,
 				'source_term_id' => (int) $source->term_id,
@@ -267,8 +407,10 @@ class Audit {
 			array( '%d', '%d', '%s', '%s', '%d', '%d', '%s', '%d', '%s' )
 		);
 		if ( false === $inserted ) {
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
-			$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+			if ( $owns_batch ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Delete only the empty audit batch created immediately above after its operation insert failed.
+				$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+			}
 			return new \WP_Error( 'taxonomy_tidy_audit_failed', __( 'The operation record could not be created, so no change was made.', 'taxonomy-tidy' ) );
 		}
 		$operation_id = (int) $wpdb->insert_id;
@@ -276,12 +418,26 @@ class Audit {
 		if ( 'merge' === $preview['action'] ) {
 			$saved = self::save_relationship_snapshot( $operation_id, $source, $preview['target'], $relationship_table );
 			if ( is_wp_error( $saved ) ) {
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Discard only the relationship snapshot for the operation that could not be fully journaled.
 				$wpdb->delete( $operation_table, array( 'id' => $operation_id ), array( '%d' ) );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
-				$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+				if ( $owns_batch ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Delete only the empty audit batch created by this operation after snapshot creation failed.
+					$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+				}
 				return $saved;
 			}
+		}
+		$route_saved = Routes::create_for_operation( $operation_id, $preview );
+		if ( is_wp_error( $route_saved ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Discard only the relationship snapshot for an operation that has not started.
+			$wpdb->delete( $relationship_table, array( 'operation_id' => $operation_id ), array( '%d' ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Discard the operation row because no taxonomy mutation has begun.
+			$wpdb->delete( $operation_table, array( 'id' => $operation_id ), array( '%d' ) );
+			if ( $owns_batch ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Discard the empty parent batch because the single operation did not start.
+				$wpdb->delete( $batch_table, array( 'id' => $batch_id ), array( '%d' ) );
+			}
+			return $route_saved;
 		}
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Mark the durable snapshot complete before any taxonomy mutation begins.
@@ -296,7 +452,7 @@ class Audit {
 			array( '%d', '%s' )
 		);
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Mark the batch before mutations so an interrupted apply is visible and recoverable.
-		$batch_started = $wpdb->update(
+		$batch_started = $owns_batch ? $wpdb->update(
 			$batch_table,
 			array( 'status' => 'applying' ),
 			array(
@@ -305,7 +461,7 @@ class Audit {
 			),
 			array( '%s' ),
 			array( '%d', '%s' )
-		);
+		) : 1;
 		if ( 1 !== $operation_started || 1 !== $batch_started ) {
 			return new \WP_Error( 'taxonomy_tidy_apply_start_failed', __( 'The saved snapshot could not be marked ready. No taxonomy change was attempted; review Activity before retrying.', 'taxonomy-tidy' ) );
 		}
@@ -354,17 +510,27 @@ class Audit {
 				array( '%d' )
 			);
 			$restore = self::restore_operation( $operation_id, true );
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
-			$wpdb->update(
-				$batch_table,
-				array(
-					'status'       => is_wp_error( $restore ) ? 'rollback_failed' : 'failed',
-					'completed_at' => current_time( 'mysql', true ),
-				),
-				array( 'id' => $batch_id ),
-				array( '%s', '%s' ),
-				array( '%d' )
-			);
+			if ( is_wp_error( $restore ) ) {
+				$restore_status = 'restore_failed';
+			} else {
+				Routes::remove_for_operation( $operation_id );
+				$restore_status = 'rolled_back';
+			}
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Record whether the interrupted operation was restored before reporting its batch state.
+			$wpdb->update( $operation_table, array( 'result' => $restore_status ), array( 'id' => $operation_id ), array( '%s' ), array( '%d' ) );
+			if ( $owns_batch ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
+				$wpdb->update(
+					$batch_table,
+					array(
+						'status'       => is_wp_error( $restore ) ? 'rollback_failed' : 'failed',
+						'completed_at' => current_time( 'mysql', true ),
+					),
+					array( 'id' => $batch_id ),
+					array( '%s', '%s' ),
+					array( '%d' )
+				);
+			}
 			if ( is_wp_error( $restore ) ) {
 				/* translators: 1: original change error, 2: restoration error, 3: audit batch ID. */
 				return new \WP_Error( 'taxonomy_tidy_apply_and_restore_failed', sprintf( __( 'The change failed (%1$s) and automatic restoration needs attention: %2$s. Batch ID: %3$s', 'taxonomy-tidy' ), $error->getMessage(), $restore->get_error_message(), $uuid ) );
@@ -385,17 +551,20 @@ class Audit {
 			array( '%d' )
 		);
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
-		$wpdb->update(
-			$batch_table,
-			array(
-				'status'       => 'applied',
-				'summary'      => self::summary_json( $preview ),
-				'completed_at' => current_time( 'mysql', true ),
-			),
-			array( 'id' => $batch_id ),
-			array( '%s', '%s', '%s' ),
-			array( '%d' )
-		);
+		if ( $owns_batch ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Complete the local single-operation audit batch after the mutation has been recorded.
+			$wpdb->update(
+				$batch_table,
+				array(
+					'status'       => 'applied',
+					'summary'      => self::summary_json( $preview ),
+					'completed_at' => current_time( 'mysql', true ),
+				),
+				array( 'id' => $batch_id ),
+				array( '%s', '%s', '%s' ),
+				array( '%d' )
+			);
+		}
 
 		return array(
 			'batch_id'   => $batch_id,
@@ -550,10 +719,10 @@ class Audit {
 		global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This fresh, prepared read is required to verify the exact term and relationship state before applying or restoring a change.
 		$batch = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE id = %d', self::table( 'batches' ), absint( $batch_id ) ) );
-		if ( ! $batch || ! in_array( $batch->status, array( 'applied', 'applying', 'rollback_failed', 'rolling_back' ), true ) ) {
+		if ( ! $batch || ! in_array( $batch->status, array( 'applied', 'applying', 'apply_failed', 'rollback_failed', 'rolling_back' ), true ) ) {
 			return new \WP_Error( 'taxonomy_tidy_batch_not_rollbackable', __( 'This batch is not available to roll back.', 'taxonomy-tidy' ) );
 		}
-		$resume = in_array( $batch->status, array( 'applying', 'rollback_failed', 'rolling_back' ), true );
+		$resume = in_array( $batch->status, array( 'applying', 'apply_failed', 'rollback_failed', 'rolling_back' ), true );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Persist the recovery state before restoring so an interrupted rollback can be resumed.
 		$wpdb->update(
 			self::table( 'batches' ),
@@ -580,6 +749,7 @@ class Audit {
 				// The operation never passed the durable-snapshot phase, so no term mutation began.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Mark the untouched operation as safely skipped during recovery.
 				$wpdb->update( self::table( 'operations' ), array( 'result' => 'rolled_back' ), array( 'id' => (int) $operation->id ), array( '%s' ), array( '%d' ) );
+				Routes::remove_for_operation( (int) $operation->id );
 				continue;
 			}
 			$authorized = Taxonomy_Service::get_authorized( $operation->taxonomy, true );
@@ -594,6 +764,7 @@ class Audit {
 				}
 				return $result;
 			}
+			Routes::remove_for_operation( (int) $operation->id );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- This direct write is required for the local audit journal or exact ID-preserving rollback; the site has no equivalent WordPress API for these rows.
 			$wpdb->update( self::table( 'operations' ), array( 'result' => 'rolled_back' ), array( 'id' => (int) $operation->id ), array( '%s' ), array( '%d' ) );
 		}

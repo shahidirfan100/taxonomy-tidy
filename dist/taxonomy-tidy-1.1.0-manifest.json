@@ -1,0 +1,212 @@
+{
+  "plugin": "Taxonomy Tidy",
+  "version": "1.1.0",
+  "author": "shahidirfan100",
+  "wordpress_org_contributor": "shahidirfan100",
+  "archive": "taxonomy-tidy-1.1.0.zip",
+  "archive_bytes": 44154,
+  "archive_sha256": "af014ee3027b40655172c5ce200f26c2304d5cb802f0b569cf94fb765bb280a8",
+  "file_count": 14,
+  "zip_integrity": "PASS",
+  "path_layout": "PASS",
+  "source_hash_parity": true,
+  "installed_zip_inventory_parity": true,
+  "installed_file_hash_parity": true,
+  "version_parity": "PASS",
+  "validation_site": "WordPress 7.1.2 / PHP 8.5.8 / SQLite integration",
+  "plugin_check": "PASS - no errors",
+  "runtime_suite": "PASS - 23 checks",
+  "php_lint": "PASS - 10 files",
+  "javascript_syntax": "PASS",
+  "wordpress_extra_phpcs": "PASS - no findings",
+  "readme_validator": "PASS - only optional no-donate-link note",
+  "assets": [
+    {
+      "file": "banner-1544x500.png",
+      "bytes": 54128,
+      "width": 1544,
+      "height": 500
+    },
+    {
+      "file": "banner-772x250.png",
+      "bytes": 21736,
+      "width": 772,
+      "height": 250
+    },
+    {
+      "file": "icon-128x128.png",
+      "bytes": 3521,
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "icon-256x256.png",
+      "bytes": 7437,
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "icon.svg",
+      "bytes": 553
+    },
+    {
+      "file": "screenshot-1.png",
+      "bytes": 144683,
+      "width": 1600,
+      "height": 1700
+    },
+    {
+      "file": "screenshot-2.png",
+      "bytes": 84375,
+      "width": 1600,
+      "height": 1050
+    },
+    {
+      "file": "screenshot-3.png",
+      "bytes": 71794,
+      "width": 1600,
+      "height": 1100
+    },
+    {
+      "file": "screenshot-4.png",
+      "bytes": 69238,
+      "width": 1600,
+      "height": 900
+    }
+  ],
+  "files": [
+    {
+      "path": "taxonomy-tidy/LICENSE",
+      "bytes": 654,
+      "sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08",
+      "source_sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08",
+      "installed_sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/readme.txt",
+      "bytes": 5485,
+      "sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
+      "source_sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
+      "installed_sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/taxonomy-tidy.php",
+      "bytes": 1427,
+      "sha256": "b32df9e4a34fc4769d58bd2375b1d4d13349574427c1619f17997d6aa94f1424",
+      "source_sha256": "b32df9e4a34fc4769d58bd2375b1d4d13349574427c1619f17997d6aa94f1424",
+      "installed_sha256": "b32df9e4a34fc4769d58bd2375b1d4d13349574427c1619f17997d6aa94f1424",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/uninstall.php",
+      "bytes": 2207,
+      "sha256": "cf60cf29e0ae850ffed93d76f0bf2b6d4bf1d4c04fcf7c2a2230b8d7bf25d249",
+      "source_sha256": "cf60cf29e0ae850ffed93d76f0bf2b6d4bf1d4c04fcf7c2a2230b8d7bf25d249",
+      "installed_sha256": "cf60cf29e0ae850ffed93d76f0bf2b6d4bf1d4c04fcf7c2a2230b8d7bf25d249",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/assets/css/admin.css",
+      "bytes": 16064,
+      "sha256": "cdd51c06af435d60b529a1a9ce40cad59c6acf9e9df8f087d49ce5b594ad32df",
+      "source_sha256": "cdd51c06af435d60b529a1a9ce40cad59c6acf9e9df8f087d49ce5b594ad32df",
+      "installed_sha256": "cdd51c06af435d60b529a1a9ce40cad59c6acf9e9df8f087d49ce5b594ad32df",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/assets/js/admin.js",
+      "bytes": 2871,
+      "sha256": "57059fc55c73a4d87aab6a447f182d08ce7480017349ce5ee8cbb4ff3305d5bf",
+      "source_sha256": "57059fc55c73a4d87aab6a447f182d08ce7480017349ce5ee8cbb4ff3305d5bf",
+      "installed_sha256": "57059fc55c73a4d87aab6a447f182d08ce7480017349ce5ee8cbb4ff3305d5bf",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-actions.php",
+      "bytes": 20167,
+      "sha256": "1439f5b0ceb8663ffc73113ace227ea46be8bb5cd0fa60b070bab7159696959b",
+      "source_sha256": "1439f5b0ceb8663ffc73113ace227ea46be8bb5cd0fa60b070bab7159696959b",
+      "installed_sha256": "1439f5b0ceb8663ffc73113ace227ea46be8bb5cd0fa60b070bab7159696959b",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-admin.php",
+      "bytes": 50831,
+      "sha256": "e82cdf241986131e97a1b7402a21a023ebd093f8a4dc2e520c7ee9e1d34c9b7f",
+      "source_sha256": "e82cdf241986131e97a1b7402a21a023ebd093f8a4dc2e520c7ee9e1d34c9b7f",
+      "installed_sha256": "e82cdf241986131e97a1b7402a21a023ebd093f8a4dc2e520c7ee9e1d34c9b7f",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-audit.php",
+      "bytes": 68648,
+      "sha256": "7497566ede2bc7789f75ce45db663d54a821721faec5cdfa76de33afd959cd87",
+      "source_sha256": "7497566ede2bc7789f75ce45db663d54a821721faec5cdfa76de33afd959cd87",
+      "installed_sha256": "7497566ede2bc7789f75ce45db663d54a821721faec5cdfa76de33afd959cd87",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-plugin.php",
+      "bytes": 723,
+      "sha256": "dbea33d0b2340a2606f0a8bbffed72f9950be9f82209e321a273527984137aa4",
+      "source_sha256": "dbea33d0b2340a2606f0a8bbffed72f9950be9f82209e321a273527984137aa4",
+      "installed_sha256": "dbea33d0b2340a2606f0a8bbffed72f9950be9f82209e321a273527984137aa4",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-routes.php",
+      "bytes": 8660,
+      "sha256": "7ddb4154c924de57917d91a5d6359bbd467664ac527b119bb359b0d50d8c86d0",
+      "source_sha256": "7ddb4154c924de57917d91a5d6359bbd467664ac527b119bb359b0d50d8c86d0",
+      "installed_sha256": "7ddb4154c924de57917d91a5d6359bbd467664ac527b119bb359b0d50d8c86d0",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-scanner.php",
+      "bytes": 3576,
+      "sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1",
+      "source_sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1",
+      "installed_sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-schema.php",
+      "bytes": 3840,
+      "sha256": "94483c0ccc1120487914fee24193094c61d33da203747b8a1c530b2fc29db88b",
+      "source_sha256": "94483c0ccc1120487914fee24193094c61d33da203747b8a1c530b2fc29db88b",
+      "installed_sha256": "94483c0ccc1120487914fee24193094c61d33da203747b8a1c530b2fc29db88b",
+      "source_match": true,
+      "installed_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-taxonomy-service.php",
+      "bytes": 4427,
+      "sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6",
+      "source_sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6",
+      "installed_sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6",
+      "source_match": true,
+      "installed_match": true
+    }
+  ],
+  "metadata_versions": {
+    "plugin_header": "1.1.0",
+    "plugin_constant": "1.1.0",
+    "schema": "1.1.0",
+    "readme_stable_tag": "1.1.0",
+    "contributor": "shahidirfan100"
+  }
+}

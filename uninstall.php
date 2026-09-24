@@ -14,6 +14,8 @@ function taxonomy_tidy_remove_site_data() {
 	}
 
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- This destructive cleanup runs only after the site administrator opted in to delete local plugin data during uninstall.
+	$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'taxonomy_tidy_routes' );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- This destructive cleanup runs only after the site administrator opted in to delete local plugin data during uninstall.
 	$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'taxonomy_tidy_relationships' );
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- This destructive cleanup runs only after the site administrator opted in to delete local plugin data during uninstall.
 	$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'taxonomy_tidy_operations' );

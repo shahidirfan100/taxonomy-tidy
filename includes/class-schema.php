@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 class Schema {
-	const VERSION = '1.0.0';
+	const VERSION = '1.1.0';
 	const OPTION  = 'taxonomy_tidy_schema_version';
 
 	/** Install or upgrade tables for the current site only. */
@@ -19,6 +19,7 @@ class Schema {
 		$batches         = $wpdb->prefix . 'taxonomy_tidy_batches';
 		$operations      = $wpdb->prefix . 'taxonomy_tidy_operations';
 		$relationships   = $wpdb->prefix . 'taxonomy_tidy_relationships';
+		$routes          = $wpdb->prefix . 'taxonomy_tidy_routes';
 
 		$sql_batches = "CREATE TABLE {$batches} (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -62,10 +63,29 @@ class Schema {
 			KEY object_id (object_id)
 		) {$charset_collate};";
 
+		$sql_routes = "CREATE TABLE {$routes} (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			operation_id bigint(20) unsigned NOT NULL,
+			rule_type varchar(12) NOT NULL,
+			source_hash char(64) NOT NULL,
+			source_path text NOT NULL,
+			taxonomy varchar(32) NOT NULL,
+			source_term_id bigint(20) unsigned NOT NULL,
+			source_tt_id bigint(20) unsigned NOT NULL,
+			target_term_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			target_tt_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			created_at datetime NOT NULL,
+			PRIMARY KEY  (id),
+			UNIQUE KEY operation_id (operation_id),
+			KEY source_hash (source_hash),
+			KEY source_tt_id (source_tt_id)
+		) {$charset_collate};";
+
 		dbDelta( $sql_batches );
 		dbDelta( $sql_operations );
 		dbDelta( $sql_relationships );
-		$expected_tables = array( $batches, $operations, $relationships );
+		dbDelta( $sql_routes );
+		$expected_tables = array( $batches, $operations, $relationships, $routes );
 		foreach ( $expected_tables as $table ) {
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Verify the actual table after dbDelta before marking this schema complete.
 			$found_table = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) );

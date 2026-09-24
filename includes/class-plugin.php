@@ -21,8 +21,9 @@ class Plugin {
 
 	/** Register site-local behavior. */
 	public function run() {
+		add_action( 'init', array( 'TaxonomyTidy\\Schema', 'maybe_upgrade' ), 1 );
+		add_action( 'template_redirect', array( 'TaxonomyTidy\\Routes', 'handle_404' ), 0 );
 		if ( is_admin() ) {
-			add_action( 'admin_init', array( 'TaxonomyTidy\\Schema', 'maybe_upgrade' ) );
 			add_action( 'admin_menu', array( Admin::instance(), 'register' ) );
 			Actions::instance()->register();
 		}

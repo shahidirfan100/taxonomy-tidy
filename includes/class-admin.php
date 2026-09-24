@@ -47,6 +47,8 @@ class Admin {
 		$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
 		if ( 'preview' === $view ) {
 			$this->render_preview();
+		} elseif ( 'bulk-preview' === $view ) {
+			$this->render_bulk_preview();
 		} elseif ( 'terms' === $view ) {
 			$this->render_term_search();
 		} elseif ( 'rename' === $view ) {
@@ -62,7 +64,8 @@ class Admin {
 		$settings   = get_option( 'taxonomy_tidy_settings', array() );
 		$taxonomies = Taxonomy_Service::get_available( ! empty( $settings['include_private'] ) );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This read-only, user-bound scan token only selects a saved report.
-		$scan_state = isset( $_GET['scan'] ) ? get_transient( 'taxonomy_tidy_scan_' . sanitize_text_field( wp_unslash( $_GET['scan'] ) ) ) : false;
+		$scan_token = isset( $_GET['scan'] ) ? sanitize_text_field( wp_unslash( $_GET['scan'] ) ) : '';
+		$scan_state = $scan_token ? get_transient( 'taxonomy_tidy_scan_' . $scan_token ) : false;
 		$report     = is_array( $scan_state ) && get_current_user_id() === (int) $scan_state['user_id'] ? $scan_state['report'] : false;
 		?>
 		<section class="tt-intro">
@@ -117,31 +120,46 @@ class Admin {
 		</section>
 		<?php
 		foreach ( $report as $taxonomy_name => $result ) {
-			$this->render_taxonomy_findings( $taxonomy_name, $result );
+			$this->render_taxonomy_findings( $taxonomy_name, $result, $scan_token );
 		}
 		$this->render_term_finder_link( $taxonomies );
 	}
 
-	/** Render likely duplicate and empty-term findings for one taxonomy. */
-	private function render_taxonomy_findings( $taxonomy_name, $result ) {
+	/** Render selectable duplicate groups and empty terms for one taxonomy. */
+	private function render_taxonomy_findings( $taxonomy_name, $result, $scan_token ) {
 		$taxonomy_label = $result['taxonomy']->labels->name;
+		$settings       = get_option( 'taxonomy_tidy_settings', array() );
 		?>
 		<section class="tt-section">
 			<div class="tt-section-heading">
 				<div><p class="tt-eyebrow"><?php esc_html_e( 'Taxonomy', 'taxonomy-tidy' ); ?></p><h2><?php echo esc_html( $taxonomy_label ); ?></h2></div>
 			<code><?php echo esc_html( $taxonomy_name ); ?></code>
-		</div>
+			</div>
 		<?php if ( empty( $result['groups'] ) ) : ?>
 			<p class="tt-inline-empty"><?php esc_html_e( 'No matching labels found in this taxonomy.', 'taxonomy-tidy' ); ?></p>
 		<?php else : ?>
-			<div class="tt-table-wrap"><table class="widefat striped tt-table">
-				<thead><tr><th scope="col"><?php esc_html_e( 'Finding', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Terms and assignments', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Review', 'taxonomy-tidy' ); ?></th></tr></thead>
-				<tbody>
-				<?php foreach ( $result['groups'] as $group ) : ?>
-					<tr>
-						<td><span class="tt-badge <?php echo 'exact' === $group['kind'] ? 'tt-badge-info' : 'tt-badge-warning'; ?>"><?php echo esc_html( 'exact' === $group['kind'] ? __( 'Exact label', 'taxonomy-tidy' ) : __( 'Formatting variant', 'taxonomy-tidy' ) ); ?></span><p class="tt-finding-note"><?php esc_html_e( 'Same comparison key', 'taxonomy-tidy' ); ?></p></td>
-						<td>
-							<ul class="tt-term-list">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tt-bulk-form tt-merge-bulk-form">
+				<input type="hidden" name="action" value="taxonomy_tidy_bulk_preview"><input type="hidden" name="bulk_operation" value="merge"><input type="hidden" name="taxonomy" value="<?php echo esc_attr( $taxonomy_name ); ?>"><input type="hidden" name="scan_token" value="<?php echo esc_attr( $scan_token ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_bulk_preview' ); ?>
+				<div class="tt-bulk-toolbar">
+					<label class="tt-select-all"><input type="checkbox" data-select-all=".tt-merge-choice"><span><?php esc_html_e( 'Select all visible groups', 'taxonomy-tidy' ); ?></span></label>
+					<span class="tt-selection-count" data-selection-count data-label-one="<?php esc_attr_e( 'group selected', 'taxonomy-tidy' ); ?>" data-label-many="<?php esc_attr_e( 'groups selected', 'taxonomy-tidy' ); ?>" aria-live="polite">0 <?php esc_html_e( 'groups selected', 'taxonomy-tidy' ); ?></span>
+					<label class="tt-redirect-setting"><input type="checkbox" name="create_redirects" value="1" <?php checked( ! empty( $settings['redirect_merged_terms'] ) ); ?>><span><strong><?php esc_html_e( 'Create a 301 redirect for each old term archive', 'taxonomy-tidy' ); ?></strong><small><?php esc_html_e( 'Send visitors and search engines to the canonical term archive.', 'taxonomy-tidy' ); ?></small></span></label>
+					<button type="submit" class="button button-primary tt-primary-button" data-bulk-action disabled><?php esc_html_e( 'Review selected merges', 'taxonomy-tidy' ); ?></button>
+				</div>
+				<div class="tt-table-wrap"><table class="widefat striped tt-table tt-bulk-merge-table">
+					<thead><tr><th scope="col" class="tt-select-column"><span class="screen-reader-text"><?php esc_html_e( 'Select group', 'taxonomy-tidy' ); ?></span></th><th scope="col"><?php esc_html_e( 'Finding', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Terms and assignments', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Keep canonical term', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Review', 'taxonomy-tidy' ); ?></th></tr></thead>
+					<tbody>
+					<?php foreach ( $result['groups'] as $group_index => $group ) : ?>
+						<tr>
+							<td><label><input class="tt-merge-choice" type="checkbox" name="merge_groups[]" value="<?php echo esc_attr( $group_index ); ?>"><span class="screen-reader-text">
+							<?php
+							/* translators: %s: name of a duplicate term group. */
+							$group_label = sprintf( __( 'Select duplicate group %s', 'taxonomy-tidy' ), $group['members'][0]->name );
+							echo esc_html( $group_label );
+							?>
+							</span></label></td>
+							<td><span class="tt-badge <?php echo 'exact' === $group['kind'] ? 'tt-badge-info' : 'tt-badge-warning'; ?>"><?php echo esc_html( 'exact' === $group['kind'] ? __( 'Exact label', 'taxonomy-tidy' ) : __( 'Formatting variant', 'taxonomy-tidy' ) ); ?></span><p class="tt-finding-note"><?php esc_html_e( 'Same comparison key', 'taxonomy-tidy' ); ?></p></td>
+							<td><ul class="tt-term-list">
 							<?php foreach ( $group['members'] as $term ) : ?>
 								<li><strong><?php echo esc_html( $term->name ); ?></strong><span><?php echo esc_html( $this->count_label( (int) $term->count, 'assignment' ) ); ?></span>
 								<?php
@@ -149,33 +167,20 @@ class Admin {
 									?>
 									<small><?php esc_html_e( 'Has a parent term', 'taxonomy-tidy' ); ?></small><?php endif; ?></li>
 							<?php endforeach; ?>
-							</ul>
-						</td>
-						<td>
-							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tt-review-form">
-								<input type="hidden" name="action" value="taxonomy_tidy_preview"><input type="hidden" name="operation" value="merge"><input type="hidden" name="taxonomy" value="<?php echo esc_attr( $taxonomy_name ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_preview' ); ?>
-								<label><span><?php esc_html_e( 'Term to merge', 'taxonomy-tidy' ); ?></span><select name="source_id" required>
-								<?php
-								foreach ( $group['members'] as $index => $term ) :
-									?>
-									<option value="<?php echo esc_attr( $term->term_id ); ?>" <?php selected( 1 === $index ); ?>><?php echo esc_html( $term->name . ' · ' . number_format_i18n( (int) $term->count ) ); ?></option><?php endforeach; ?></select></label>
-								<label><span><?php esc_html_e( 'Keep this term', 'taxonomy-tidy' ); ?></span><select name="target_id" required>
-								<?php
-								foreach ( $group['members'] as $index => $term ) :
-									?>
-									<option value="<?php echo esc_attr( $term->term_id ); ?>" <?php selected( 0 === $index ); ?>><?php echo esc_html( $term->name . ' · ' . number_format_i18n( (int) $term->count ) ); ?></option><?php endforeach; ?></select></label>
-								<button type="submit" class="button tt-secondary-button"><?php esc_html_e( 'Review impact', 'taxonomy-tidy' ); ?></button>
-							</form>
-						</td>
-					</tr>
-				<?php endforeach; ?>
-				</tbody>
-			</table></div>
+							</ul></td>
+							<td><label><span class="screen-reader-text"><?php esc_html_e( 'Canonical term to keep', 'taxonomy-tidy' ); ?></span><select name="canonical[<?php echo esc_attr( $group_index ); ?>]" required>
+							<?php foreach ( $group['members'] as $index => $term ) : ?>
+								<option value="<?php echo esc_attr( $term->term_id ); ?>" <?php selected( 0 === $index ); ?>><?php echo esc_html( $term->name . ' · ' . number_format_i18n( (int) $term->count ) ); ?></option>
+							<?php endforeach; ?>
+							</select></label></td>
+							<td><button type="submit" class="button tt-secondary-button" name="review_group" value="<?php echo esc_attr( $group_index ); ?>"><?php esc_html_e( 'Review this group', 'taxonomy-tidy' ); ?></button></td>
+						</tr>
+					<?php endforeach; ?>
+					</tbody>
+				</table></div>
+			</form>
 			<?php if ( $result['group_total'] > count( $result['groups'] ) ) : ?>
-				<?php
-				/* translators: 1: number of displayed groups, 2: total number of duplicate groups. */
-				$group_summary = sprintf( __( 'Showing the first %1$s of %2$s duplicate groups. Scan one taxonomy at a time to focus the report.', 'taxonomy-tidy' ), number_format_i18n( count( $result['groups'] ) ), number_format_i18n( $result['group_total'] ) );
-				?>
+				<?php /* translators: 1: number of displayed groups, 2: total number of duplicate groups. */ $group_summary = sprintf( __( 'Showing the first %1$s of %2$s duplicate groups. Scan one taxonomy at a time to focus the report.', 'taxonomy-tidy' ), number_format_i18n( count( $result['groups'] ) ), number_format_i18n( $result['group_total'] ) ); ?>
 				<p class="description"><?php echo esc_html( $group_summary ); ?></p>
 			<?php endif; ?>
 		<?php endif; ?>
@@ -184,11 +189,19 @@ class Admin {
 		<?php if ( empty( $result['empty'] ) ) : ?>
 			<p class="tt-inline-empty"><?php esc_html_e( 'No empty terms found.', 'taxonomy-tidy' ); ?></p>
 		<?php else : ?>
-			<div class="tt-empty-list">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tt-bulk-form tt-empty-bulk-form">
+				<input type="hidden" name="action" value="taxonomy_tidy_bulk_preview"><input type="hidden" name="bulk_operation" value="delete"><input type="hidden" name="taxonomy" value="<?php echo esc_attr( $taxonomy_name ); ?>"><input type="hidden" name="scan_token" value="<?php echo esc_attr( $scan_token ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_bulk_preview' ); ?>
+				<div class="tt-bulk-toolbar"><label class="tt-select-all"><input type="checkbox" data-select-all=".tt-empty-choice"><span><?php esc_html_e( 'Select all visible empty terms', 'taxonomy-tidy' ); ?></span></label><span class="tt-selection-count" data-selection-count data-label-one="<?php esc_attr_e( 'term selected', 'taxonomy-tidy' ); ?>" data-label-many="<?php esc_attr_e( 'terms selected', 'taxonomy-tidy' ); ?>" aria-live="polite">0 <?php esc_html_e( 'terms selected', 'taxonomy-tidy' ); ?></span><button type="submit" class="button tt-danger-button" data-bulk-action disabled><?php esc_html_e( 'Review selected removals', 'taxonomy-tidy' ); ?></button></div>
+				<div class="tt-empty-list">
 				<?php foreach ( $result['empty'] as $term ) : ?>
-					<div class="tt-empty-row"><div><strong><?php echo esc_html( $term->name ); ?></strong><span><?php esc_html_e( 'Term ID', 'taxonomy-tidy' ); ?> <?php echo esc_html( $term->term_id ); ?></span></div><form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="taxonomy_tidy_preview"><input type="hidden" name="operation" value="delete"><input type="hidden" name="taxonomy" value="<?php echo esc_attr( $taxonomy_name ); ?>"><input type="hidden" name="source_id" value="<?php echo esc_attr( $term->term_id ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_preview' ); ?><button type="submit" class="button tt-quiet-button"><?php esc_html_e( 'Review removal', 'taxonomy-tidy' ); ?></button></form></div>
+					<div class="tt-empty-row"><label><input class="tt-empty-choice" type="checkbox" name="empty_terms[]" value="<?php echo esc_attr( $term->term_id ); ?>"><span><strong><?php echo esc_html( $term->name ); ?></strong><small><?php esc_html_e( 'Term ID', 'taxonomy-tidy' ); ?> <?php echo esc_html( $term->term_id ); ?></small></span></label><span class="tt-empty-action"><?php esc_html_e( 'Archive returns 410 Gone after removal', 'taxonomy-tidy' ); ?></span></div>
 				<?php endforeach; ?>
-			</div>
+				</div>
+			</form>
+			<?php if ( $result['empty_total'] > count( $result['empty'] ) ) : ?>
+				<?php /* translators: 1: displayed empty term count, 2: total empty term count. */ $empty_summary = sprintf( __( 'Showing the first %1$s of %2$s empty terms. Select up to 100 in one batch, then run another scan to continue.', 'taxonomy-tidy' ), number_format_i18n( count( $result['empty'] ) ), number_format_i18n( $result['empty_total'] ) ); ?>
+				<p class="description"><?php echo esc_html( $empty_summary ); ?></p>
+			<?php endif; ?>
 		<?php endif; ?>
 		</section>
 		<?php
@@ -203,7 +216,7 @@ class Admin {
 			$this->empty_state( __( 'Review expired', 'taxonomy-tidy' ), __( 'This review has expired or belongs to another user. Return to the dashboard and review the impact again.', 'taxonomy-tidy' ) );
 			return;
 		}
-		$preview = Audit::preview( $state['action'], $state['taxonomy'], $state['source_id'], $state['target_id'], $state['new_name'], $state['new_slug'] );
+		$preview = Audit::preview( $state['action'], $state['taxonomy'], $state['source_id'], $state['target_id'], $state['new_name'], $state['new_slug'], array( 'create_redirects' => ! empty( $state['create_redirects'] ) ) );
 		if ( is_wp_error( $preview ) || ! hash_equals( $state['fingerprint'], Audit::impact_fingerprint( $preview ) ) ) {
 			$this->empty_state( __( 'The terms changed', 'taxonomy-tidy' ), __( 'The site changed after this review was prepared. Start a new review to see the current impact.', 'taxonomy-tidy' ) );
 			return;
@@ -294,13 +307,134 @@ else :
 			<?php
 			if ( $preview['old_url'] && ( 'delete' === $state['action'] || $preview['old_url'] !== $preview['new_url'] ) ) :
 				?>
-				<div class="notice notice-warning inline tt-url-warning"><p><?php esc_html_e( 'The archive URL changes. Taxonomy Tidy records the old and new URLs in the audit report; it does not create redirects.', 'taxonomy-tidy' ); ?></p></div><?php endif; ?>
+				<div class="notice notice-warning inline tt-url-warning"><p>
+				<?php
+				if ( 'delete' === $state['action'] ) {
+					esc_html_e( 'This removed empty-term archive will return HTTP 410 Gone.', 'taxonomy-tidy' );
+				} elseif ( 'merge' === $state['action'] && ! empty( $state['create_redirects'] ) ) {
+					esc_html_e( 'The old archive URL will permanently redirect to the canonical term archive.', 'taxonomy-tidy' );
+				} else {
+					esc_html_e( 'The old archive URL will return its normal WordPress not-found response because no redirect was selected.', 'taxonomy-tidy' );
+				}
+				?>
+				</p></div><?php endif; ?>
 			<div class="tt-review-footer">
 				<a class="button tt-secondary-button" href="<?php echo esc_url( admin_url( 'admin.php?page=taxonomy-tidy' ) ); ?>"><?php esc_html_e( 'Back to dashboard', 'taxonomy-tidy' ); ?></a>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tt-apply-form">
 					<input type="hidden" name="action" value="taxonomy_tidy_apply"><input type="hidden" name="preview_token" value="<?php echo esc_attr( $token ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_apply_' . $token ); ?>
 					<label><input type="checkbox" name="confirm" value="1" required> <?php echo esc_html( $this->confirmation_text( $state['action'], $source, $target ) ); ?></label>
 					<button type="submit" class="button button-primary tt-primary-button"><?php echo esc_html( $this->apply_button_text( $state['action'] ) ); ?></button>
+				</form>
+			</div>
+		</section>
+		<?php
+	}
+
+	/** Show one consolidated, read-only review for a selected batch. */
+	private function render_bulk_preview() {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- This read-only, user-bound token displays the preview; apply requires a separate nonce.
+		$token = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '';
+		$state = $token ? get_transient( 'taxonomy_tidy_bulk_preview_' . $token ) : false;
+		if ( ! is_array( $state ) || get_current_user_id() !== (int) $state['user_id'] || empty( $state['items'] ) ) {
+			$this->empty_state( __( 'Batch review expired', 'taxonomy-tidy' ), __( 'This review expired or belongs to another user. Return to the dashboard and prepare a new review.', 'taxonomy-tidy' ) );
+			return;
+		}
+		$previews    = array();
+		$assignments = 0;
+		$children    = 0;
+		$redirects   = 0;
+		foreach ( $state['items'] as $item ) {
+			$preview = Audit::preview( $item['action'], $item['taxonomy'], $item['source_id'], $item['target_id'], '', '', array( 'create_redirects' => ! empty( $item['create_redirects'] ) ) );
+			if ( is_wp_error( $preview ) || ! hash_equals( $item['fingerprint'], Audit::impact_fingerprint( $preview ) ) ) {
+				$this->empty_state( __( 'The terms changed', 'taxonomy-tidy' ), __( 'At least one term or assignment changed after this review was prepared. Run the scan and review the updated impact.', 'taxonomy-tidy' ) );
+				return;
+			}
+			$previews[]   = $preview;
+			$assignments += (int) $preview['object_count'];
+			$children    += count( $preview['children'] );
+			$redirects   += ! empty( $item['create_redirects'] ) ? 1 : 0;
+		}
+		$count = count( $previews );
+		?>
+		<section class="tt-section tt-review-page tt-bulk-preview-page">
+			<p class="tt-eyebrow"><?php echo esc_html( $previews[0]['taxonomy']->labels->name ); ?> · <?php echo esc_html( 'merge' === $state['mode'] ? __( 'Bulk merge', 'taxonomy-tidy' ) : __( 'Bulk empty-term removal', 'taxonomy-tidy' ) ); ?></p>
+			<h2><?php esc_html_e( 'Review the full batch before applying', 'taxonomy-tidy' ); ?></h2>
+			<p class="tt-review-description"><?php esc_html_e( 'Nothing has changed yet. Every row below is checked again when you apply this batch. The saved activity record restores the batch together.', 'taxonomy-tidy' ); ?></p>
+			<div class="tt-impact-grid tt-bulk-impact-grid">
+				<div class="tt-impact-item"><span><?php esc_html_e( 'Term changes', 'taxonomy-tidy' ); ?></span><strong><?php echo esc_html( number_format_i18n( $count ) ); ?></strong></div>
+				<div class="tt-impact-item"><span><?php esc_html_e( 'Assignments affected', 'taxonomy-tidy' ); ?></span><strong><?php echo esc_html( number_format_i18n( $assignments ) ); ?></strong></div>
+				<div class="tt-impact-item"><span><?php esc_html_e( 'Child terms reviewed', 'taxonomy-tidy' ); ?></span><strong><?php echo esc_html( number_format_i18n( $children ) ); ?></strong></div>
+				<?php
+				if ( 'merge' === $state['mode'] ) :
+					?>
+					<div class="tt-impact-item"><span><?php esc_html_e( '301 redirects', 'taxonomy-tidy' ); ?></span><strong><?php echo esc_html( number_format_i18n( $redirects ) ); ?></strong></div><?php endif; ?>
+			</div>
+			<div class="tt-table-wrap"><table class="widefat striped tt-table tt-bulk-preview-table"><thead><tr><th scope="col"><?php esc_html_e( 'Reviewed change', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Assignments', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Hierarchy', 'taxonomy-tidy' ); ?></th><th scope="col"><?php esc_html_e( 'Archive response', 'taxonomy-tidy' ); ?></th></tr></thead><tbody>
+			<?php foreach ( $previews as $preview ) : ?>
+				<tr>
+					<td><strong><?php echo esc_html( $preview['source']->name ); ?></strong><span class="tt-preview-arrow" aria-hidden="true">→</span>
+					<?php
+					if ( 'merge' === $preview['action'] ) :
+						?>
+						<strong><?php echo esc_html( $preview['target']->name ); ?></strong><small><?php esc_html_e( 'Canonical term kept', 'taxonomy-tidy' ); ?></small>
+						<?php
+else :
+	?>
+						<small><?php esc_html_e( 'Empty term removed', 'taxonomy-tidy' ); ?></small><?php endif; ?></td>
+					<td><?php echo esc_html( $this->count_label( (int) $preview['object_count'], 'assignment' ) ); ?></td>
+					<td><?php echo esc_html( $this->count_label( count( $preview['children'] ), 'child term' ) ); ?>
+					<?php
+					if ( ! empty( $preview['hierarchy_changes'] ) ) :
+						?>
+						<ul class="tt-preview-hierarchy">
+						<?php
+						foreach ( $preview['hierarchy_changes'] as $change ) :
+							?>
+						<li>
+							<?php
+							/* translators: 1: child term name, 2: new parent term name. */
+							$hierarchy_message = sprintf( __( '%1$s moves under %2$s', 'taxonomy-tidy' ), $change['term']->name, $change['parent_name'] );
+							echo esc_html( $hierarchy_message );
+							?>
+						</li>
+						<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+					</td>
+					<td class="tt-preview-url-cell"><small><?php echo esc_html( $preview['old_url'] ? $preview['old_url'] : __( 'No public archive URL', 'taxonomy-tidy' ) ); ?></small>
+					<?php
+					if ( 'delete' === $preview['action'] ) :
+						?>
+						<strong class="tt-route-gone"><?php esc_html_e( '410 Gone', 'taxonomy-tidy' ); ?></strong>
+						<?php
+elseif ( ! empty( $preview['create_redirects'] ) && $preview['new_url'] ) :
+	?>
+						<strong><?php esc_html_e( '301 →', 'taxonomy-tidy' ); ?></strong><small><?php echo esc_html( $preview['new_url'] ); ?></small>
+						<?php
+else :
+	?>
+	<strong><?php esc_html_e( 'No redirect selected', 'taxonomy-tidy' ); ?></strong><?php endif; ?></td>
+				</tr>
+			<?php endforeach; ?>
+			</tbody></table></div>
+			<div class="tt-review-footer">
+				<a class="button tt-secondary-button" href="<?php echo esc_url( admin_url( 'admin.php?page=taxonomy-tidy' ) ); ?>"><?php esc_html_e( 'Back to dashboard', 'taxonomy-tidy' ); ?></a>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="tt-apply-form">
+					<input type="hidden" name="action" value="taxonomy_tidy_bulk_apply"><input type="hidden" name="preview_token" value="<?php echo esc_attr( $token ); ?>"><?php wp_nonce_field( 'taxonomy_tidy_bulk_apply_' . $token ); ?>
+					<label><input type="checkbox" name="confirm" value="1" required>
+					<?php
+					/* translators: %s: number of reviewed term changes. */
+					$confirm_label = sprintf( __( 'I reviewed all %s changes and their URL and hierarchy effects.', 'taxonomy-tidy' ), number_format_i18n( $count ) );
+					echo esc_html( $confirm_label );
+					?>
+					</label>
+					<button type="submit" class="button button-primary tt-primary-button">
+					<?php
+					/* translators: %s: number of reviewed term changes. */
+					$apply_label = sprintf( __( 'Apply all %s changes', 'taxonomy-tidy' ), number_format_i18n( $count ) );
+					echo esc_html( $apply_label );
+					?>
+					</button>
 				</form>
 			</div>
 		</section>
@@ -425,9 +559,11 @@ else :
 				$has_taxonomy   = is_array( $summary ) && ! empty( $summary['taxonomy'] );
 				$authorization  = $has_taxonomy ? Taxonomy_Service::get_authorized( $summary['taxonomy'], true ) : null;
 				$action_labels  = array(
-					'merge'  => __( 'Merge term', 'taxonomy-tidy' ),
-					'rename' => __( 'Rename term', 'taxonomy-tidy' ),
-					'delete' => __( 'Remove empty term', 'taxonomy-tidy' ),
+					'merge'       => __( 'Merge term', 'taxonomy-tidy' ),
+					'rename'      => __( 'Rename term', 'taxonomy-tidy' ),
+					'delete'      => __( 'Remove empty term', 'taxonomy-tidy' ),
+					'bulk_merge'  => __( 'Bulk merge terms', 'taxonomy-tidy' ),
+					'bulk_delete' => __( 'Bulk remove empty terms', 'taxonomy-tidy' ),
 				);
 				$action_label   = is_array( $summary ) && isset( $summary['action'], $action_labels[ $summary['action'] ] ) ? $action_labels[ $summary['action'] ] : '';
 				$source_name    = is_array( $summary ) && isset( $summary['source_name'] ) ? $summary['source_name'] : '';
@@ -456,7 +592,7 @@ else :
 						<td><span class="tt-status tt-status-<?php echo esc_attr( sanitize_html_class( $batch->status ) ); ?>"><?php echo esc_html( ucwords( str_replace( '_', ' ', $batch->status ) ) ); ?></span></td>
 						<td>
 							<?php
-							$recoverable = in_array( $batch->status, array( 'applying', 'rollback_failed', 'rolling_back' ), true );
+							$recoverable = in_array( $batch->status, array( 'applying', 'apply_failed', 'rollback_failed', 'rolling_back' ), true );
 							if ( ( 'applied' === $batch->status && is_array( $summary ) ) || $recoverable ) :
 								?>
 								<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-confirm="<?php echo esc_attr__( 'Resume recovery for this batch? If an apply or rollback request is still running, wait for it to finish first. Taxonomy Tidy will stop if it detects conflicting changes.', 'taxonomy-tidy' ); ?>">
@@ -465,7 +601,9 @@ else :
 									<?php wp_nonce_field( 'taxonomy_tidy_rollback_' . $batch->id ); ?>
 									<button type="submit" class="button tt-rollback-button">
 										<?php
-										if ( $recoverable ) {
+										if ( 'apply_failed' === $batch->status ) {
+											esc_html_e( 'Roll back partial batch', 'taxonomy-tidy' );
+										} elseif ( $recoverable ) {
 											esc_html_e( 'Recover interrupted change', 'taxonomy-tidy' );
 										} else {
 											esc_html_e( 'Roll back', 'taxonomy-tidy' );
@@ -498,6 +636,7 @@ else :
 		<section class="tt-section tt-settings-panel"><p class="tt-eyebrow"><?php esc_html_e( 'Site-local preferences', 'taxonomy-tidy' ); ?></p><h2><?php esc_html_e( 'Settings', 'taxonomy-tidy' ); ?></h2><p><?php esc_html_e( 'Taxonomy Tidy works with the terms registered on this site. It does not send site data to an external service.', 'taxonomy-tidy' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"><input type="hidden" name="action" value="taxonomy_tidy_save_settings"><?php wp_nonce_field( 'taxonomy_tidy_save_settings' ); ?>
 				<label class="tt-setting-row"><span><strong><?php esc_html_e( 'Include non-public taxonomies', 'taxonomy-tidy' ); ?></strong><small><?php esc_html_e( 'Show admin-visible taxonomies marked private by their registering plugin. Actions remain limited to taxonomies your role can manage.', 'taxonomy-tidy' ); ?></small></span><input type="checkbox" name="include_private" value="1" <?php checked( ! empty( $settings['include_private'] ) ); ?>></label>
+				<label class="tt-setting-row"><span><strong><?php esc_html_e( 'Create 301 redirects for merged term archives by default', 'taxonomy-tidy' ); ?></strong><small><?php esc_html_e( 'Preselect the redirect option when reviewing duplicate groups. You can change it for each batch. Removed empty-term archives return 410 Gone.', 'taxonomy-tidy' ); ?></small></span><input type="checkbox" name="redirect_merged_terms" value="1" <?php checked( ! empty( $settings['redirect_merged_terms'] ) ); ?>></label>
 				<label class="tt-setting-row"><span><strong><?php esc_html_e( 'Delete audit data when this plugin is uninstalled', 'taxonomy-tidy' ); ?></strong><small><?php esc_html_e( 'Off by default so rollback records remain available if the plugin is removed by mistake. When enabled, uninstall removes this site’s settings and audit tables.', 'taxonomy-tidy' ); ?></small></span><input type="checkbox" name="delete_data_on_uninstall" value="1" <?php checked( ! empty( $settings['delete_data_on_uninstall'] ) ); ?>></label>
 				<p class="submit"><button type="submit" class="button button-primary tt-primary-button"><?php esc_html_e( 'Save settings', 'taxonomy-tidy' ); ?></button></p>
 			</form>
