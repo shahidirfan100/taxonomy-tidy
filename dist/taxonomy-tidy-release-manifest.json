@@ -1,0 +1,124 @@
+{
+  "plugin": "Taxonomy Tidy",
+  "version": "1.0.0",
+  "archive": "taxonomy-tidy-1.0.0.zip",
+  "archive_bytes": 34340,
+  "archive_sha256": "cd64afa5b0c2b147cd8b367c8fe1544e039969d32158b0767107221f464de433",
+  "file_count": 13,
+  "zip_integrity": "PASS",
+  "path_layout": "PASS",
+  "source_hash_parity": "PASS",
+  "installed_zip_inventory_parity": "PASS",
+  "installed_file_hash_parity": "PASS",
+  "version_parity": "PASS",
+  "validation_site": "WordPress 7.1.2 / PHP 8.5.8 / SQLite integration",
+  "assets": [
+    {
+      "file": "banner-1544x500.png",
+      "width": 1544,
+      "height": 500
+    },
+    {
+      "file": "banner-772x250.png",
+      "width": 772,
+      "height": 250
+    },
+    {
+      "file": "icon-128x128.png",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "file": "icon-256x256.png",
+      "width": 256,
+      "height": 256
+    },
+    {
+      "file": "screenshot-1.png",
+      "width": 1200,
+      "height": 900
+    },
+    {
+      "file": "screenshot-2.png",
+      "width": 1200,
+      "height": 1200
+    },
+    {
+      "file": "screenshot-3.png",
+      "width": 1200,
+      "height": 900
+    },
+    {
+      "file": "screenshot-4.png",
+      "width": 1200,
+      "height": 900
+    }
+  ],
+  "files": [
+    {
+      "path": "taxonomy-tidy/assets/css/admin.css",
+      "size": 13034,
+      "sha256": "5a1dcb8381218643ddb694f68dfd072d0dbd8cd28cf047da49c38ad22320cb6b"
+    },
+    {
+      "path": "taxonomy-tidy/assets/js/admin.js",
+      "size": 1599,
+      "sha256": "b2f6a299ea05934ee985fd2af7d52aa28808d8b9d5b266e1e46a3b00fe8808ed"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-actions.php",
+      "size": 9292,
+      "sha256": "66fd49ebc7aa667c8030fb1912ff1bac1704586be6e453047e93bdaf4a39188c"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-admin.php",
+      "size": 39468,
+      "sha256": "cd01190e4f8d8993e1b1b68552f58fd34b001194f29f222ef7c9dc6976f447bb"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-audit.php",
+      "size": 60425,
+      "sha256": "f9d02162e3c5896c1015c45f9b53bb5af45ba9066f56dd9d18503c692c5783b0"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-plugin.php",
+      "size": 640,
+      "sha256": "d37c20e9cbb92a896609b5d7fc183bb9b37b16d0f0d6fb3f51aba45a81ca0796"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-scanner.php",
+      "size": 3576,
+      "sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-schema.php",
+      "size": 3070,
+      "sha256": "44ddb82870b8b184ffefa6d813840829e8277088f0b4e0c290c5fa72c0beac3a"
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-taxonomy-service.php",
+      "size": 4427,
+      "sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6"
+    },
+    {
+      "path": "taxonomy-tidy/LICENSE",
+      "size": 654,
+      "sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08"
+    },
+    {
+      "path": "taxonomy-tidy/readme.txt",
+      "size": 3944,
+      "sha256": "d1726f86ecece26dc6db532eb153768938747102e98594bc63af9e44849234de"
+    },
+    {
+      "path": "taxonomy-tidy/taxonomy-tidy.php",
+      "size": 1239,
+      "sha256": "2c0d7046c05d8af6daccfa5ca63fb7ecf567cae8ff315deb0040dd7a20704174"
+    },
+    {
+      "path": "taxonomy-tidy/uninstall.php",
+      "size": 1849,
+      "sha256": "62c8106d6fa7f9131b4c9781c75fa56b63db099cb035a00fecaa4eab6261213e"
+    }
+  ]
+}
