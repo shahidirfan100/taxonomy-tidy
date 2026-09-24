@@ -5,7 +5,7 @@ Prepared: 2026-09-24
 ## Release artifact
 
 - Install ZIP: `taxonomy-tidy-1.1.0.zip`
-- Archive size: 44,154 bytes; SHA-256: `af014ee3027b40655172c5ce200f26c2304d5cb802f0b569cf94fb765bb280a8`.
+- Archive size: 44,152 bytes; SHA-256: `a75ccbd29f3d3bd2e2a282e3185c7a541c29cbb431e787743e7c0d19d13b6aae`.
 - Contents: 14 install files under `taxonomy-tidy/`; development documentation, tests, and listing media are excluded.
 - The exact ZIP was installed and activated in the validation site. Archive integrity, expected paths, source-file hashes, installed-file hashes, and plugin/readme version parity are recorded in `../dist/taxonomy-tidy-1.1.0-manifest.json`.
 - Plugin header version, `TAXONOMY_TIDY_VERSION`, schema version, readme stable tag, and WordPress.org contributor `shahidirfan100` match the release metadata.
@@ -40,6 +40,7 @@ Prepared: 2026-09-24
 
 - The publisher confirmed the WordPress.org username `shahidirfan100`; it is listed in `Contributors` and the plugin author fields.
 - The final `readme.txt` was checked with the [official Readme Validator](https://wordpress.org/plugins/developers/readme-validator/) after metadata edits. It reports no missing contributor or upgrade notice; its only note is the optional absence of a donate link. No donation URL was supplied.
+- WordPress.org submission feedback rejected `Tested up to: 7.1.2` because that field accepts major/minor versions only. It is corrected to `7.1`, matching WordPress.org's readme guidance; this release was runtime-tested on WordPress 7.1.2.
 - The exact first-review notice was not available in the workspace. The known regression risks above were tested, but this report cannot claim a line-by-line response to an unseen review notice. Compare the original reviewer notice before submitting again.
 - The previous exact-name/candidate-slug lookup was preliminary. A fresh direct lookup could not be confirmed in this run, and WordPress.org assigns the final slug during submission. This is not trademark clearance.
 - No WordPress.org submission, SVN publication, or approval has occurred. This is a locally validated release candidate.

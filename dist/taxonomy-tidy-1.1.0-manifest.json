@@ -4,8 +4,8 @@
   "author": "shahidirfan100",
   "wordpress_org_contributor": "shahidirfan100",
   "archive": "taxonomy-tidy-1.1.0.zip",
-  "archive_bytes": 44154,
-  "archive_sha256": "af014ee3027b40655172c5ce200f26c2304d5cb802f0b569cf94fb765bb280a8",
+  "archive_bytes": 44152,
+  "archive_sha256": "a75ccbd29f3d3bd2e2a282e3185c7a541c29cbb431e787743e7c0d19d13b6aae",
   "file_count": 14,
   "zip_integrity": "PASS",
   "path_layout": "PASS",
@@ -20,6 +20,15 @@
   "javascript_syntax": "PASS",
   "wordpress_extra_phpcs": "PASS - no findings",
   "readme_validator": "PASS - only optional no-donate-link note",
+  "readme_tested_up_to": "7.1",
+  "metadata_versions": {
+    "plugin_header": "1.1.0",
+    "plugin_constant": "1.1.0",
+    "schema": "1.1.0",
+    "readme_stable_tag": "1.1.0",
+    "tested_up_to": "7.1",
+    "contributor": "shahidirfan100"
+  },
   "assets": [
     {
       "file": "banner-1544x500.png",
@@ -86,10 +95,10 @@
     },
     {
       "path": "taxonomy-tidy/readme.txt",
-      "bytes": 5485,
-      "sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
-      "source_sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
-      "installed_sha256": "912b8f30135718830e84c4b957f5872467736725fe8dfe4ae49c053b8b62c607",
+      "bytes": 5483,
+      "sha256": "c6185914558a4e5a3184e41a2228a5aaaccaff9c72d36cd094dd37f72c5dcce1",
+      "source_sha256": "c6185914558a4e5a3184e41a2228a5aaaccaff9c72d36cd094dd37f72c5dcce1",
+      "installed_sha256": "c6185914558a4e5a3184e41a2228a5aaaccaff9c72d36cd094dd37f72c5dcce1",
       "source_match": true,
       "installed_match": true
     },
@@ -201,12 +210,5 @@
       "source_match": true,
       "installed_match": true
     }
-  ],
-  "metadata_versions": {
-    "plugin_header": "1.1.0",
-    "plugin_constant": "1.1.0",
-    "schema": "1.1.0",
-    "readme_stable_tag": "1.1.0",
-    "contributor": "shahidirfan100"
-  }
+  ]
 }
