@@ -27,5 +27,5 @@ Prepared: 2026-10-29
 ## WordPress.org submission boundary
 
 - The candidate is on a review branch and has not been merged to `main`, uploaded to WordPress.org SVN, or published as a WordPress.org update.
-- Plugin Check and syntax checks passed for this candidate. This run did not include a runtime integration suite or a separate PHPCS run; the successful 1.1.0 results do not validate the changed 1.1.1 source.
+- Plugin Check, syntax checks, and the focused smoke check passed for this candidate. This run does not repeat the full runtime integration suite or a separate PHPCS run; the successful 1.1.0 results do not validate the changed 1.1.1 source beyond the smoke check above.
 - WordPress Plugin Check reports findings from its configured checks but does not itself guarantee WordPress.org approval. Review the candidate and WordPress.org submission requirements before publishing.

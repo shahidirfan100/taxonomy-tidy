@@ -56,3 +56,8 @@ jobs:
         with:
           build-dir: ./build/taxonomy-tidy
           strict: true
+      - name: Verify bulk preview sample behavior
+        run: |
+          mkdir -p build/taxonomy-tidy/tests
+          cp tests/bulk-preview-smoke.php build/taxonomy-tidy/tests/
+          wp-env run cli wp eval-file /var/www/html/wp-content/plugins/taxonomy-tidy/tests/bulk-preview-smoke.php
