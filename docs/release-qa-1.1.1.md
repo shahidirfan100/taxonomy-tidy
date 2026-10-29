@@ -12,9 +12,10 @@ Prepared: 2026-10-29
 
 ## Validation results
 
-- WordPress Plugin Check 2.1.0: PASS against a clean package built from the plugin files, with the action's strict mode enabled. The result artifact reports: “Success: Checks complete. No errors found.” [GitHub Actions run](https://github.com/shahidirfan100/taxonomy-tidy/actions/runs/40828675648).
+- WordPress Plugin Check 2.1.0: PASS against a clean package built from the plugin files, with the action's strict mode enabled. The result artifact reports: “Success: Checks complete. No errors found.” [GitHub Actions run](https://github.com/shahidirfan100/taxonomy-tidy/actions/runs/40829639359).
 - PHP syntax: PASS on PHP 7.4 and PHP 8.5 in GitHub Actions.
 - JavaScript syntax: `assets/js/admin.js` passes `node --check` in GitHub Actions.
+- WordPress runtime smoke check: PASS; bulk preview omits object samples, single preview retains them, and both preview modes produce the same impact fingerprint.
 - Package integrity: PASS for ZIP integrity, the single expected top-level directory, all 14 files, archive hash, source-file hash parity, and plugin/readme version parity.
 - Brand: plugin name and existing primary colors (`#155b45`, `#104735`) are unchanged.
 
