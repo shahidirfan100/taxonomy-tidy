@@ -27,6 +27,6 @@ Prepared: 2026-10-29
 
 ## WordPress.org submission boundary
 
-- The candidate is on a review branch and has not been merged to `main`, uploaded to WordPress.org SVN, or published as a WordPress.org update.
+- The 1.1.1 source is merged to `main` in commit `a6f64fd70b8ec6ec6256991c88ed486ba9fd30ff`. The WordPress.org SVN tree still has Stable tag `1.1.0`; the manual release workflow will update `trunk` and add `tags/1.1.1` after SVN credentials are configured in the `wordpress.org` GitHub Actions environment.
 - Plugin Check, syntax checks, and the focused smoke check passed for this candidate. This run does not repeat the full runtime integration suite or a separate PHPCS run; the successful 1.1.0 results do not validate the changed 1.1.1 source beyond the smoke check above.
 - WordPress Plugin Check reports findings from its configured checks but does not itself guarantee WordPress.org approval. Review the candidate and WordPress.org submission requirements before publishing.
