@@ -70,8 +70,8 @@ class Admin {
 		?>
 		<section class="tt-intro">
 			<div>
-				<p class="tt-eyebrow"><?php esc_html_e( 'A careful review before every change', 'taxonomy-tidy' ); ?></p>
-				<h1><?php esc_html_e( 'Clean up terms with a clear record', 'taxonomy-tidy' ); ?></h1>
+				<p class="tt-eyebrow"><?php esc_html_e( 'Taxonomy term cleanup', 'taxonomy-tidy' ); ?></p>
+				<h1><?php esc_html_e( 'Review terms before changing them', 'taxonomy-tidy' ); ?></h1>
 				<p><?php esc_html_e( 'Find duplicate labels and unused terms across categories, tags, products, and other registered taxonomies. See the impact first, then apply or restore a change.', 'taxonomy-tidy' ); ?></p>
 			</div>
 			<a class="button tt-secondary-button" href="<?php echo esc_url( admin_url( 'admin.php?page=taxonomy-tidy-activity' ) ); ?>"><?php esc_html_e( 'View activity', 'taxonomy-tidy' ); ?></a>
@@ -232,7 +232,7 @@ class Admin {
 		<section class="tt-section tt-review-page">
 			<p class="tt-eyebrow"><?php echo esc_html( $operation_label[ $state['action'] ] ); ?> · <?php echo esc_html( $preview['taxonomy']->labels->name ); ?></p>
 			<h2><?php esc_html_e( 'Review the impact before applying', 'taxonomy-tidy' ); ?></h2>
-			<p class="tt-review-description"><?php echo esc_html( sprintf( __( 'This preview is read-only. It expires after 20 minutes and will be checked again when you apply the change.', 'taxonomy-tidy' ) ) ); ?></p>
+			<p class="tt-review-description"><?php esc_html_e( 'This preview is read-only. It expires after 20 minutes and will be checked again when you apply the change.', 'taxonomy-tidy' ); ?></p>
 			<div class="tt-change-summary">
 				<div><span><?php esc_html_e( 'Current term', 'taxonomy-tidy' ); ?></span><strong><?php echo esc_html( $source->name ); ?></strong><code><?php echo esc_html( $source->slug ); ?></code></div>
 				<?php
@@ -344,7 +344,7 @@ else :
 		$children    = 0;
 		$redirects   = 0;
 		foreach ( $state['items'] as $item ) {
-			$preview = Audit::preview( $item['action'], $item['taxonomy'], $item['source_id'], $item['target_id'], '', '', array( 'create_redirects' => ! empty( $item['create_redirects'] ) ) );
+			$preview = Audit::preview( $item['action'], $item['taxonomy'], $item['source_id'], $item['target_id'], '', '', array( 'create_redirects' => ! empty( $item['create_redirects'] ), 'include_objects' => false ) );
 			if ( is_wp_error( $preview ) || ! hash_equals( $item['fingerprint'], Audit::impact_fingerprint( $preview ) ) ) {
 				$this->empty_state( __( 'The terms changed', 'taxonomy-tidy' ), __( 'At least one term or assignment changed after this review was prepared. Run the scan and review the updated impact.', 'taxonomy-tidy' ) );
 				return;

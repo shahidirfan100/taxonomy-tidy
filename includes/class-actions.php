@@ -192,7 +192,7 @@ class Actions {
 					if ( $source_id === $target_id ) {
 						continue;
 					}
-					$preview = Audit::preview( 'merge', $taxonomy, $source_id, $target_id, '', '', array( 'create_redirects' => $redirects ) );
+					$preview = Audit::preview( 'merge', $taxonomy, $source_id, $target_id, '', '', array( 'create_redirects' => $redirects, 'include_objects' => false ) );
 					if ( is_wp_error( $preview ) ) {
 						$this->redirect_notice( $preview->get_error_message(), 'error' );
 					}
@@ -216,7 +216,7 @@ class Actions {
 				if ( ! in_array( $source_id, $empty_ids, true ) ) {
 					$this->redirect_notice( __( 'A selected term is no longer in the saved empty-term scan. Run the scan again.', 'taxonomy-tidy' ), 'error' );
 				}
-				$preview = Audit::preview( 'delete', $taxonomy, $source_id );
+				$preview = Audit::preview( 'delete', $taxonomy, $source_id, 0, '', '', array( 'include_objects' => false ) );
 				if ( is_wp_error( $preview ) ) {
 					$this->redirect_notice( $preview->get_error_message(), 'error' );
 				}
@@ -274,7 +274,7 @@ class Actions {
 		}
 		$previews = array();
 		foreach ( $state['items'] as $item ) {
-			$preview = Audit::preview( $item['action'], $item['taxonomy'], $item['source_id'], $item['target_id'], '', '', array( 'create_redirects' => ! empty( $item['create_redirects'] ) ) );
+			$preview = Audit::preview( $item['action'], $item['taxonomy'], $item['source_id'], $item['target_id'], '', '', array( 'create_redirects' => ! empty( $item['create_redirects'] ), 'include_objects' => false ) );
 			if ( is_wp_error( $preview ) || ! hash_equals( $item['fingerprint'], Audit::impact_fingerprint( $preview ) ) ) {
 				delete_transient( 'taxonomy_tidy_bulk_preview_' . $token );
 				$this->redirect_notice( __( 'At least one term or assignment changed after this review. Run the scan and prepare a new batch preview.', 'taxonomy-tidy' ), 'error' );
