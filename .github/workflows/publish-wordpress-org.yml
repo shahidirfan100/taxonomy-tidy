@@ -1,0 +1,75 @@
+name: Publish to WordPress.org SVN
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish Taxonomy Tidy 1.1.1
+    if: github.ref == 'refs/heads/main'
+    environment: wordpress.org
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+      SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+      SVN_URL: https://plugins.svn.wordpress.org/taxonomy-tidy
+      SVN_WC: ${{ runner.temp }}/taxonomy-tidy-svn
+      PACKAGE_DIR: ${{ runner.temp }}/taxonomy-tidy-package
+
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+
+      - name: Validate release package
+        run: |
+          set -euo pipefail
+          test -n "$SVN_USERNAME"
+          test -n "$SVN_PASSWORD"
+          test -f dist/taxonomy-tidy-1.1.1.zip
+          test -f dist/taxonomy-tidy-1.1.1-manifest.json
+          expected_sha="$(python3 -c 'import json; print(json.load(open("dist/taxonomy-tidy-1.1.1-manifest.json"))["archive_sha256"])')"
+          actual_sha="$(sha256sum dist/taxonomy-tidy-1.1.1.zip | cut -d ' ' -f 1)"
+          test "$actual_sha" = "$expected_sha"
+          unzip -t dist/taxonomy-tidy-1.1.1.zip
+          mkdir -p "$PACKAGE_DIR"
+          unzip -q dist/taxonomy-tidy-1.1.1.zip -d "$PACKAGE_DIR"
+          grep -Fq 'Version: 1.1.1' "$PACKAGE_DIR/taxonomy-tidy/taxonomy-tidy.php"
+          grep -Fxq 'Stable tag: 1.1.1' "$PACKAGE_DIR/taxonomy-tidy/readme.txt"
+
+      - name: Check out WordPress.org plugin SVN
+        run: |
+          set -euo pipefail
+          if ! command -v svn >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install --yes subversion
+          fi
+          svn --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache --non-interactive checkout "$SVN_URL" "$SVN_WC"
+
+      - name: Verify expected current release
+        run: |
+          set -euo pipefail
+          grep -Fxq 'Stable tag: 1.1.0' "$SVN_WC/trunk/readme.txt"
+          test ! -e "$SVN_WC/tags/1.1.1"
+
+      - name: Stage trunk and 1.1.1 tag
+        run: |
+          set -euo pipefail
+          rsync -a --delete --exclude='.svn/' "$PACKAGE_DIR/taxonomy-tidy/" "$SVN_WC/trunk/"
+          svn add --force "$SVN_WC/trunk"
+          svn copy "$SVN_WC/trunk" "$SVN_WC/tags/1.1.1"
+          svn status "$SVN_WC/trunk" "$SVN_WC/tags/1.1.1"
+
+      - name: Commit release
+        run: |
+          set -euo pipefail
+          svn --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --no-auth-cache --non-interactive commit "$SVN_WC/trunk" "$SVN_WC/tags/1.1.1" --message 'Release Taxonomy Tidy 1.1.1'
+
+      - name: Verify committed trunk and tag
+        run: |
+          set -euo pipefail
+          svn cat "$SVN_URL/trunk/readme.txt" | grep -Fx 'Stable tag: 1.1.1'
+          svn cat "$SVN_URL/tags/1.1.1/readme.txt" | grep -Fx 'Stable tag: 1.1.1'
