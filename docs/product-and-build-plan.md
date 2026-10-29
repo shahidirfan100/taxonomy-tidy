@@ -1,58 +1,112 @@
-# Taxonomy Tidy — Build Plan
+# Taxonomy Tidy — Product roadmap and MVP plan
 
-## Product identity and naming check
+Updated: 2026-10-29
 
-- Display name: Taxonomy Tidy
-- Candidate WordPress.org slug and text domain: `taxonomy-tidy`
-- PHP prefix / namespace: `taxonomy_tidy_` / `TaxonomyTidy`
-- Version: 1.0.0 for the first complete release candidate
-- License: GPL-2.0-or-later
-- Scope of naming search (2026-09-23): exact-phrase web searches and WordPress.org plugin-directory searches found no matching plugin or software brand. The WordPress.org page and SVN path for `taxonomy-tidy`, plus the plugin information API, returned not found. This is a current preliminary slug check; the WordPress.org team assigns and confirms the permalink during review, and the web search is not a formal trademark clearance.
+## Product position
 
-## Evidence of user pain
+Taxonomy Tidy 1.1.1 already implements the core cleanup workflow: read-only scans, reviewed merge/rename/removal actions, durable local audit records, batch rollback, and optional archive responses. The WordPress.org listing is approved, per the maintainer. This roadmap focuses on making the existing workflow more thoroughly tested and dependable on larger sites before adding broad new features.
 
-- A WordPress.org support report says a merge left neither original nor merged tag, with no log error; the user only discovered it on a local copy. This validates preview, durable pre-change snapshots, and a clear rollback path as core product behavior: <https://wordpress.org/support/topic/tag-merge-seems-to-simply-delete-both-tags/>.
-- A TaxoPress report describes merge operations assigning posts to the default category as well; the maintainer traced it to WordPress adding the default category between source deletion and replacement. This directly informs operation ordering and a regression fixture where a post has only the source category: <https://wordpress.org/support/topic/caused-even-more-work/>.
-- Another TaxoPress report shows same-named values across WooCommerce attribute taxonomies can be combined across taxonomy boundaries, damaging a store. Every suggestion and operation will therefore be scoped to one registered taxonomy and visibly name that taxonomy: <https://wordpress.org/support/topic/feature-request-merge-terms-inside-a-specific-product-attribute-taxonomy/>.
-- A support exchange says users misunderstood which merge field was the source and which was the destination. The UI will use explicit “Keep this term” and “Merge these terms into it” labels, not ambiguous pair ordering: <https://wordpress.org/support/topic/merged-tags-being-deleted-issue/>.
-- Existing WordPress.org tools cover bulk merging and taxonomy edits (Term Management Tools, 10,000+ installations in the supplied research). The product distinction is visible impact preview, retained pre-change state, batch audit history, and tested restoration rather than a general term spreadsheet editor: <https://en-gb.wordpress.org/plugins/term-management-tools/>.
+Keep the product name, slug, namespace, text domain, and established green colors (#155b45 and #104735). Keep the product local to the site: no accounts, analytics, telemetry, remote AI, or external service calls. Every mutation remains manual, previewed, confirmed, and recoverable.
 
-## MVP acceptance scope
+## What 1.1.1 already does
 
-1. Discover registered taxonomies available to the current user; default to public, admin-visible taxonomies. Keep every action inside one taxonomy and one site in multisite.
-2. Scan for empty terms, same-label duplicates, and conservative likely duplicates where labels differ only by case, spacing, punctuation, or accents. No speculative typo/fuzzy matching.
-3. Show counts, sample affected objects and object types, hierarchy impact, and old/new term archive URLs before an edit.
-4. Support merge into a clearly selected canonical term, safe rename, and explicit removal of empty terms. Preview is read-only; every applied operation records a batch ID and enough information to restore the term ID, taxonomy row, metadata, relationships, parent links, and original label/slug.
-5. Roll back an applied batch after checking that restoration will not overwrite later edits. Report conflicts instead of forcing them.
-6. Export audit summaries as CSV and JSON. Keep audit records local; no accounts, analytics, remote APIs, or front-end code.
-7. Provide a focused dashboard, settings page, and activity/rollback page with accessible labels, keyboard operation, clear destructive-action language, responsive tables, and no external UI dependencies.
-8. Use dynamic taxonomy capabilities, nonces on mutations, validated inputs, escaped output, prepared SQL, current-site table isolation, translation-ready strings, and conservative uninstall data handling.
+- Scans manageable, admin-visible registered taxonomies for empty terms and exact or formatting-only duplicate labels.
+- Keeps operations inside one site and one taxonomy, and uses the taxonomy’s capabilities for changes.
+- Previews assignment counts, sample objects for single changes, hierarchy changes, and archive URLs before applying.
+- Supports rename, merge into an explicitly chosen canonical term, and removal of empty terms.
+- Rechecks preview fingerprints before applying; writes local audit state before mutation; preserves partial-batch recovery and conflict-aware rollback.
+- Optionally records same-site 301 redirects for merged archives and HTTP 410 responses for removed empty-term archives.
+- Exports audit summaries as CSV or JSON. No term data is sent off-site.
 
-## Implementation sequence and files
+## Code review findings that shape the roadmap
 
-1. Build the WordPress plugin skeleton under `outputs/taxonomy-tidy/`: main bootstrap, `readme.txt`, GPL license, uninstall handler, admin and service classes, scoped admin CSS/JS, and user-facing help.
-2. Add versioned per-site audit tables and schema setup. Store snapshots before writes; process a batch with compensating rollback on failure. Never describe the operation as a database transaction because WordPress hooks and storage engines can make that claim false.
-3. Implement taxonomy discovery, bounded impact queries, duplicate/empty scan, dry-run preview, merge/rename/delete, audit export, and guarded rollback.
-4. Build the dashboard, settings, and activity pages around the preview-first flow; test mobile and keyboard behavior. Avoid external assets or tracking.
-5. Run the plugin in a clean WordPress environment with debug notices enabled, capture real plugin screens, and generate WordPress.org icon/banner and screenshots from the running UI. Keep WordPress.org listing assets outside the install ZIP.
-6. Validate source and final ZIP: PHP and JavaScript syntax, WordPress coding standards, WordPress.org readme and headers, Plugin Check static/runtime, activation/deactivation/uninstall behavior, multisite isolation, merge/default-category regression, exact-ID rollback, metadata and hierarchy restore, CSV/JSON exports, screenshots/dimensions, archive layout, file inventory, and SHA-256.
+| Area | Current state | Next improvement |
+| --- | --- | --- |
+| Correctness evidence | Current Actions run syntax checks, strict Plugin Check, and one focused bulk-preview smoke check. Core apply, rollback, failure recovery, upgrades, and multisite are not covered by automated tests in the repository. | Bring the core behavior into repeatable WordPress integration tests and CI before adding mutations or detection modes. |
+| Compatibility | The plugin declares WordPress 6.4 and PHP 7.4 minimums. Actions lint PHP 7.4 and 8.5, but syntax checks do not prove runtime compatibility. | Test the declared minimum and the current stable WordPress/PHP versions at runtime; include MySQL and MariaDB coverage. |
+| Taxonomy scans | Scanner reads 500 rows at a time with OFFSET, but retains a key for each unique normalized term name for the duration of the scan. It materializes up to 100 groups and 100 empty terms; the UI already tells users when those result lists are capped. | Benchmark large taxonomies, then reduce offset and memory costs without changing the conservative match rules or hiding capped results. |
+| Merge cost | The batch limit is 100 term operations, not 100 affected assignments. Snapshot creation checks target membership once per related object and writes one journal row per relationship; merge then calls WordPress term APIs per affected object. A term with many assignments can therefore make one admin request long even in a small batch. | Measure query count, time, and memory by assignment count. Batch the membership checks and add a measured workload guard. Use resumable processing only if benchmarks show synchronous requests are unsafe. |
+| Audit growth | Activity loads the latest 50 batches without pagination. Export loads all operations and serialized snapshots into memory before producing output. | Add keyset pagination and stream exports so retained rollback history does not make the admin or export request grow without bound. |
+| Failure reporting | Schema installation returns a success value, but the upgrade hook does not inspect it or expose a clear admin health message. | Report missing or failed schema setup clearly and make recovery safe and repeatable. |
+| Front-end 404 path | Redirect rules are queried only on front-end 404 GET/HEAD requests, using an indexed path hash. Sites with no matching rule still pay for that lookup. | Measure the cost; optimize only if 404 traffic makes it material, while retaining correct rule invalidation and redirect behavior. |
 
-## Prior WordPress.org submission lessons to enforce
+The 1.1.0 QA document records extensive local checks, but the current GitHub workflow does not reproduce that full suite. Keep those results as historical evidence; do not treat them as automated coverage for later code.
 
-- Main plugin file, directory, text domain, and candidate slug all use `taxonomy-tidy`; include complete version, WordPress/PHP requirements, GPL license headers, direct-access guards, and a valid readme.
-- Re-check the current stable WordPress version at final packaging; WordPress.org currently lists 7.1.2 (released 2026-09-22), so the release target is not a stale beta/RC number: <https://wordpress.org/download/releases/>.
-- Put listing screenshots, icons, and banners in a separate top-level WordPress.org `assets/` directory, never inside the plugin's `trunk/assets`; screenshot captions and filenames must match. Capture the actual running plugin UI.
-- Keep Plugin Check, PHPCS/WordPress-Extra, PHP compatibility, runtime activation, and package parity as separate evidence. A clean Plugin Check result is not by itself a clean PHPCS result or proof of WordPress.org acceptance.
-- Do not bundle third-party adapters or build artifacts that trigger unrelated standards findings. Check the final ZIP itself and record its exact inventory and hash.
-- Do not claim a plugin is submitted or approved without a real WordPress.org account/reviewer result. This task prepares a reviewable package and evidence locally.
+## Recommended next MVP: reliability first
 
-## Final review outcome — 2026-09-24
+The existing feature set is sufficient for the first useful release. The next MVP should prove that it continues to behave correctly across supported WordPress environments and larger taxonomies. Do not expand into automatic cleanup or fuzzy matching yet.
 
-- Version 1.1.0 installs and activates from the exact ZIP on WordPress 7.1.2 / PHP 8.5.8. The database in this environment is SQLite-backed; MySQL/MariaDB, WordPress 6.4, PHP 7.4, and a real multisite network were not available for runtime testing.
-- The final packaged ZIP passes Plugin Check with no errors and PHP_CodeSniffer WordPress-Extra with no findings. The runtime suite passes all 23 recorded checks, including built-in default-term protection, custom taxonomy behavior, hierarchy and metadata restore, interrupted recovery, 500-term scan boundaries, 20 merge/rollback cycles, batch compensation, bulk removals, and route cleanup.
-- Lifecycle checks pass for deactivation/reactivation, default data preservation, opt-in uninstall deletion, and schema recreation. HTTP checks return a same-site 301 for a merged archive, 200 for its canonical target, and 410 with `X-Robots-Tag: noindex` for a removed empty-term archive.
-- Live admin checks confirm bulk actions are disabled at zero selection, enable after selecting rows, and open a consolidated review. Applying a change requires the separate required confirmation. The temporary browser-applied test batch was rolled back.
-- The distributable ZIP has 14 files under forward-slash `taxonomy-tidy/` paths, excludes development files and listing media, and matches both source and installed-file hashes. See `../dist/taxonomy-tidy-1.1.0-manifest.json` and `release-qa-1.1.0.md`.
-- Listing assets and four real admin screenshots remain in `../wordpress-org-assets/`, separate from the plugin ZIP. Their filenames and captions match the current `readme.txt`.
-- The publisher confirmed the WordPress.org username `shahidirfan100`; it is included in the final plugin header and readme. The exact first-review notice remains unavailable, so compare the original notice before resubmission. The previous name/slug lookup was preliminary only; WordPress.org assigns the final slug at submission, and this is not trademark clearance.
-- This is a locally validated release candidate, not a submitted or approved plugin. Keep the exact WordPress.org reviewer thread attached when addressing prior feedback.
+### Stage 1 — Make core behavior a CI release gate
+
+Add a repeatable WordPress integration suite and run it in GitHub Actions. Cover:
+
+- Install, activation, schema upgrade from 1.1.0, deactivation, reactivation, and opt-in uninstall; confirm default uninstall preserves audit data.
+- Exact and formatting-only duplicate detection, result caps, custom taxonomy capabilities, private taxonomies, and non-English labels.
+- Merge, rename, and empty-term removal; default-category protection; assignment preservation; child hierarchy changes; term metadata; and same-taxonomy isolation.
+- Stale or expired previews, missing capabilities, invalid nonces, failed writes, interrupted apply, partial-batch recovery, rollback conflicts, and exact-ID restoration.
+- 301, 410, query-string normalization, same-site restriction, rollback removal of route rules, and behavior when no saved route exists.
+- CSV and JSON export, including spreadsheet-formula safety for untrusted term labels and URLs.
+- Multisite table isolation and uninstall behavior.
+
+Add WordPress-Extra PHPCS to CI. Test runtime behavior at WordPress 6.4 and the current stable release, on PHP 7.4 and a current supported PHP 8.x release, with MySQL and MariaDB. Keep Plugin Check, coding standards, syntax checks, runtime tests, and ZIP/package verification as separate checks.
+
+### Stage 2 — Measure and improve scale
+
+Before changing algorithms, add repeatable fixtures for 1,000, 10,000, and 50,000 terms, plus merges with increasing assignment counts. Record wall time, peak memory, and database queries for scan, preview, apply, rollback, Activity, export, and the 404 route lookup. Set pass limits from the checked-in CI runner baseline before optimizing; avoid hardware-independent time claims.
+
+Then:
+
+1. Replace OFFSET paging with a stable keyset cursor. Keep duplicate comparison conservative. Avoid retaining full term objects for all unique names; choose a compact index or temporary per-scan storage only after the benchmark shows which is needed.
+2. Batch target-membership checks for relationship snapshots. Keep WordPress APIs for object-term mutations so registered hooks still run. Verify that the saved journal remains complete before any mutation starts.
+3. Set a maximum safe workload based on affected assignments as well as operation count. Explain the limit during review and leave terms unchanged when it is exceeded.
+4. Make Activity and exports paginated/streamed. Never prune applied rollback records automatically; any future retention control must show what becomes non-restorable and require explicit administrator action.
+5. If a measured operation still exceeds safe request limits, add resumable progress with idempotent steps and a clear recovery action. Do not add a background queue preemptively.
+
+### Stage 3 — Improve operator workflow
+
+After the reliability and scale gates pass:
+
+- Add filters and pagination to Activity, with status, taxonomy, and date filters.
+- Add a read-only rollback preflight that lists conflicts before the user confirms restoration.
+- Add scan progress and cancellation if large-taxonomy tests show scans exceed a safe request duration.
+- Verify keyboard-only use, screen-reader announcements for selection and progress, responsive tables, and status indicators that do not rely on color alone.
+
+Keep the current admin design and brand palette. Avoid a React rewrite or a new design system unless a demonstrated product requirement needs it.
+
+## MVP options
+
+| Option | Scope | Recommendation |
+| --- | --- | --- |
+| A. Reliability-first | Stage 1 plus measured Stage 2 fixes. No new cleanup modes. | Recommended. It reduces risk in the code paths that can change site data and gives future performance work a baseline. |
+| B. Convenience-first | Stage 1, then Activity filters, rollback preflight, and scan progress. | Do after A; the interface improvements are useful, but they do not replace mutation and recovery tests. |
+| C. Expanded workflows | Read-only WP-CLI scan/export, saved ignore rules, or other agency workflow tools. | Evaluate later from support requests. Keep any initial CLI commands read-only; require the same preview and confirmation safeguards before considering mutations. |
+
+## Keep out of the MVP
+
+- Fuzzy or typo-based automatic matches. They can merge terms users intended to keep separate.
+- Automatic or scheduled merges/deletions. The product’s safety model depends on review and confirmation.
+- Cross-taxonomy operations. Same names can mean different things in categories, product attributes, and custom taxonomies.
+- Cloud accounts, remote analytics, remote AI suggestions, or telemetry. If a future service is proposed, it needs a real user benefit, explicit consent, clear readme disclosure, and a separate privacy review.
+- Automatic audit pruning that removes the only rollback record.
+
+## Next-release acceptance gate
+
+A future code release is ready only when:
+
+1. The integration matrix passes at the declared minimum and current stable WordPress/PHP versions, on MySQL and MariaDB.
+2. Plugin Check and WordPress-Extra pass; the test suite covers apply, rollback, recovery, exports, routes, upgrade, and uninstall.
+3. Large-data benchmarks publish their fixture sizes, query counts, peak memory, and measured budgets; a batch above the safe workload limit makes no changes.
+4. Scan caps and failure states are visible. Schema errors are actionable. Rollback stops on conflicts and does not overwrite later user changes.
+5. The install ZIP matches source and manifest, the readme and plugin headers agree on version, and listing assets remain outside the install package.
+6. Plugin name, slug, and brand colors remain unchanged.
+
+## WordPress.org references
+
+- [Plugin Developer Handbook](https://developer.wordpress.org/plugins/)
+- [WordPress security principles](https://developer.wordpress.org/apis/security/)
+- [WordPress.org detailed plugin guidelines](https://developer.wordpress.org/plugins/wordpress-org/detailed-plugin-guidelines/)
+- [WordPress.org common review issues](https://developer.wordpress.org/plugins/wordpress-org/common-issues/)
+- [WordPress coding standards](https://developer.wordpress.org/coding-standards/wordpress-coding-standards/)
+- [WordPress plugin testing guide](https://make.wordpress.org/core/handbook/testing/automated-testing/writing-phpunit-tests-for-wordpress/)
+
+Maintain the existing source-first release process. Update the plugin version and WordPress.org stable tag only when code for the next release passes this gate; keep SVN publishing manual and verify the committed trunk and version tag afterward.
