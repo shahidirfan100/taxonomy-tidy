@@ -22,7 +22,7 @@ Keep the product name, slug, namespace, text domain, and established green color
 
 | Area | Current state | Next improvement |
 | --- | --- | --- |
-| Correctness evidence | Current Actions run syntax checks, strict Plugin Check, and one focused bulk-preview smoke check. Core apply, rollback, failure recovery, upgrades, and multisite are not covered by automated tests in the repository. | Bring the core behavior into repeatable WordPress integration tests and CI before adding mutations or detection modes. |
+| Correctness evidence | Current Actions run syntax checks, strict Plugin Check, and one focused bulk-preview smoke check. Core apply, rollback, failure recovery, upgrades, and multisite are not covered by automated tests in the repository. | Bring the core behavior into repeatable WordPress integration tests and CI before adding new mutation paths or detection modes. |
 | Compatibility | The plugin declares WordPress 6.4 and PHP 7.4 minimums. Actions lint PHP 7.4 and 8.5, but syntax checks do not prove runtime compatibility. | Test the declared minimum and the current stable WordPress/PHP versions at runtime; include MySQL and MariaDB coverage. |
 | Taxonomy scans | Scanner reads 500 rows at a time with OFFSET, but retains a key for each unique normalized term name for the duration of the scan. It materializes up to 100 groups and 100 empty terms; the UI already tells users when those result lists are capped. | Benchmark large taxonomies, then reduce offset and memory costs without changing the conservative match rules or hiding capped results. |
 | Merge cost | The batch limit is 100 term operations, not 100 affected assignments. Snapshot creation checks target membership once per related object and writes one journal row per relationship; merge then calls WordPress term APIs per affected object. A term with many assignments can therefore make one admin request long even in a small batch. | Measure query count, time, and memory by assignment count. Batch the membership checks and add a measured workload guard. Use resumable processing only if benchmarks show synchronous requests are unsafe. |
@@ -34,7 +34,7 @@ The 1.1.0 QA document records extensive local checks, but the current GitHub wor
 
 ## Recommended next MVP: reliability first
 
-The existing feature set is sufficient for the first useful release. The next MVP should prove that it continues to behave correctly across supported WordPress environments and larger taxonomies. Do not expand into automatic cleanup or fuzzy matching yet.
+The current feature set is sufficient for a useful core product. The next MVP should prove that it continues to behave correctly across supported WordPress environments and larger taxonomies. Do not expand into automatic cleanup or fuzzy matching yet.
 
 ### Stage 1 — Make core behavior a CI release gate
 
