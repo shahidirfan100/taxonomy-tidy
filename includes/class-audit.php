@@ -63,6 +63,7 @@ class Audit {
 			$new_url               = is_wp_error( $future_url ) ? '' : $future_url;
 		}
 		$hierarchy_changes = array();
+		$include_objects   = ! array_key_exists( 'include_objects', $options ) || ! empty( $options['include_objects'] );
 		if ( ! empty( $children ) && 'rename' !== $action ) {
 			$target_is_child = $target && (int) $target->parent === (int) $source->term_id;
 			foreach ( $children as $child ) {
@@ -86,7 +87,7 @@ class Audit {
 			'children'          => $children,
 			'hierarchy_changes' => $hierarchy_changes,
 			'object_count'      => self::relationship_count( $source ),
-			'objects'           => Taxonomy_Service::affected_objects( $source->term_id, $taxonomy_name, 8 ),
+			'objects'           => $include_objects ? Taxonomy_Service::affected_objects( $source->term_id, $taxonomy_name, 8 ) : array(),
 			'old_url'           => Taxonomy_Service::term_url( $source->term_id, $taxonomy_name ),
 			'new_url'           => $new_url,
 			'new_name'          => $new_name,

@@ -4,7 +4,7 @@ Tags: taxonomy, categories, tags, terms, cleanup
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -76,6 +76,10 @@ It is stored in local database tables for the current site. It remains available
 
 == Changelog ==
 
+= 1.1.1 =
+* Skip affected-object samples when preparing, reviewing, and applying bulk batches; single-change previews still show sample objects.
+* Replace the slogan-like dashboard heading with a plain description.
+
 = 1.1.0 =
 * Select and review multiple duplicate groups in one preview; merge all non-canonical terms into the selected canonical term.
 * Remove multiple empty terms in one reviewed, reversible batch.
@@ -87,6 +91,9 @@ It is stored in local database tables for the current site. It remains available
 * Initial release with read-only scans, impact previews, merge, rename, empty-term removal, audit exports, and guarded rollback.
 
 == Upgrade Notice ==
+
+= 1.1.1 =
+Bulk previews avoid loading sample objects that are not displayed, reducing unnecessary work for larger batches.
 
 = 1.1.0 =
 Bulk changes now use one reviewed, confirmed, and reversible batch. Merge redirects and removed-term 410 responses are recorded with the batch.

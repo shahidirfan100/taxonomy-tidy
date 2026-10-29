@@ -1,0 +1,124 @@
+{
+  "plugin": "Taxonomy Tidy",
+  "version": "1.1.1",
+  "author": "shahidirfan100",
+  "wordpress_org_contributor": "shahidirfan100",
+  "archive": "taxonomy-tidy-1.1.1.zip",
+  "archive_bytes": 44376,
+  "archive_sha256": "34a6ffa58fd2dffb6cfcb845a7a8a0603918f75b2871e6c26b0072e5595dcdf5",
+  "file_count": 14,
+  "zip_integrity": "PASS",
+  "path_layout": "PASS",
+  "source_hash_parity": true,
+  "version_parity": "PASS",
+  "metadata_versions": {
+    "plugin_header": "1.1.1",
+    "plugin_constant": "1.1.1",
+    "schema": "1.1.0 (unchanged; no schema change in 1.1.1)",
+    "readme_stable_tag": "1.1.1",
+    "requires_at_least": "6.4",
+    "requires_php": "7.4",
+    "tested_up_to": "7.1",
+    "contributor": "shahidirfan100"
+  },
+  "files": [
+    {
+      "path": "taxonomy-tidy/LICENSE",
+      "bytes": 654,
+      "sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08",
+      "source_sha256": "62274c1769c487f19d7a8747dcbc2cca4e18735ce4939e8e160f2341bf45ac08",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/readme.txt",
+      "bytes": 5823,
+      "sha256": "62b11b76b13c7218f15bc4c9e85f909314b625d1469f1d4bc77110f4803079e1",
+      "source_sha256": "62b11b76b13c7218f15bc4c9e85f909314b625d1469f1d4bc77110f4803079e1",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/taxonomy-tidy.php",
+      "bytes": 1427,
+      "sha256": "401d7385723fe2d7a3ea55bfc39f54b21bc7acb9872e8b4be167158ec1dc00a7",
+      "source_sha256": "401d7385723fe2d7a3ea55bfc39f54b21bc7acb9872e8b4be167158ec1dc00a7",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/uninstall.php",
+      "bytes": 2207,
+      "sha256": "cf60cf29e0ae850ffed93d76f0bf2b6d4bf1d4c04fcf7c2a2230b8d7bf25d249",
+      "source_sha256": "cf60cf29e0ae850ffed93d76f0bf2b6d4bf1d4c04fcf7c2a2230b8d7bf25d249",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/assets/css/admin.css",
+      "bytes": 16064,
+      "sha256": "cdd51c06af435d60b529a1a9ce40cad59c6acf9e9df8f087d49ce5b594ad32df",
+      "source_sha256": "cdd51c06af435d60b529a1a9ce40cad59c6acf9e9df8f087d49ce5b594ad32df",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/assets/js/admin.js",
+      "bytes": 2871,
+      "sha256": "57059fc55c73a4d87aab6a447f182d08ce7480017349ce5ee8cbb4ff3305d5bf",
+      "source_sha256": "57059fc55c73a4d87aab6a447f182d08ce7480017349ce5ee8cbb4ff3305d5bf",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-actions.php",
+      "bytes": 20271,
+      "sha256": "4f10d779a49c5c03146c13d5b26e72b5c428b1c16e673ed41ab468f3e796d049",
+      "source_sha256": "4f10d779a49c5c03146c13d5b26e72b5c428b1c16e673ed41ab468f3e796d049",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-admin.php",
+      "bytes": 50823,
+      "sha256": "bbf5f657e63066f111748e94fb043def184b61459c188d40f9e173610fb34a2f",
+      "source_sha256": "bbf5f657e63066f111748e94fb043def184b61459c188d40f9e173610fb34a2f",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-audit.php",
+      "bytes": 68793,
+      "sha256": "36f4907fdcf745ffdc1eca1807188264abdce2c01336b2a415cf53eedbc4e0b5",
+      "source_sha256": "36f4907fdcf745ffdc1eca1807188264abdce2c01336b2a415cf53eedbc4e0b5",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-plugin.php",
+      "bytes": 723,
+      "sha256": "dbea33d0b2340a2606f0a8bbffed72f9950be9f82209e321a273527984137aa4",
+      "source_sha256": "dbea33d0b2340a2606f0a8bbffed72f9950be9f82209e321a273527984137aa4",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-routes.php",
+      "bytes": 8660,
+      "sha256": "7ddb4154c924de57917d91a5d6359bbd467664ac527b119bb359b0d50d8c86d0",
+      "source_sha256": "7ddb4154c924de57917d91a5d6359bbd467664ac527b119bb359b0d50d8c86d0",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-scanner.php",
+      "bytes": 3576,
+      "sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1",
+      "source_sha256": "98e67b7fbbfb4680cb3aa4f88b640df9b781c52f92d564596c5472f9a2b7a1b1",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-schema.php",
+      "bytes": 3840,
+      "sha256": "94483c0ccc1120487914fee24193094c61d33da203747b8a1c530b2fc29db88b",
+      "source_sha256": "94483c0ccc1120487914fee24193094c61d33da203747b8a1c530b2fc29db88b",
+      "source_match": true
+    },
+    {
+      "path": "taxonomy-tidy/includes/class-taxonomy-service.php",
+      "bytes": 4427,
+      "sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6",
+      "source_sha256": "2466cd242a3ae9d80e145268fe6ca81cdd0ea31b9bcd8906407222b9784844a6",
+      "source_match": true
+    }
+  ]
+}

@@ -35,8 +35,8 @@ GPL-2.0-or-later.
 
 ## Release files
 
-- Version 1.1.0 install ZIP: [dist/taxonomy-tidy-1.1.0.zip](dist/taxonomy-tidy-1.1.0.zip).
-- Release inventory and SHA-256 manifest: [dist/taxonomy-tidy-1.1.0-manifest.json](dist/taxonomy-tidy-1.1.0-manifest.json).
+- Version 1.1.1 install ZIP: [dist/taxonomy-tidy-1.1.1.zip](dist/taxonomy-tidy-1.1.1.zip).
+- Release inventory and SHA-256 manifest: [dist/taxonomy-tidy-1.1.1-manifest.json](dist/taxonomy-tidy-1.1.1-manifest.json).
 - Release QA and product plan: [docs/](docs/).
 - WordPress.org listing graphics and real admin screenshots: [wordpress-org-assets/](wordpress-org-assets/).
 - The install ZIP intentionally contains only the plugin files; the listing assets and release documents stay outside it.

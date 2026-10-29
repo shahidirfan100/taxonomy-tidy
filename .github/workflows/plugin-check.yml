@@ -1,0 +1,58 @@
+name: Plugin checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-syntax:
+    name: PHP ${{ matrix.php-version }} syntax
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: [ '7.4', '8.5' ]
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+        php-version: ${{ matrix.php-version }}
+        coverage: none
+      - name: Lint PHP files
+        run: find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -n 1 php -l
+
+  javascript-syntax:
+    name: JavaScript syntax
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+        node-version: 22
+      - name: Check admin script syntax
+        run: node --check assets/js/admin.js
+
+  plugin-check:
+    name: WordPress Plugin Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Build install package for checking
+        run: |
+          mkdir -p build/taxonomy-tidy
+          cp LICENSE readme.txt taxonomy-tidy.php uninstall.php build/taxonomy-tidy/
+          cp -R assets includes build/taxonomy-tidy/
+      - name: Run WordPress Plugin Check
+        uses: wordpress/plugin-check-action@v1
+        with:
+          build-dir: ./build/taxonomy-tidy
+          strict: true
